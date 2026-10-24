@@ -1,0 +1,11 @@
+{
+  "name": "Little Cherubs Learner",
+  "short_name": "Little Cherubs",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4F5F8",
+  "theme_color": "#24305C",
+  "icons": [
+    { "src": "/assets/logo.png", "sizes": "240x240", "type": "image/png" }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "name": "little-cherubs-learner",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Little Cherubs Learner: online learning for Zambian secondary Forms 1-4, with 90-day parent passes sold on Selar.",
+  "scripts": {
+    "dev": "node scripts/dev-server.mjs",
+    "test": "node scripts/test.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@netlify/blobs": "11.1.4",
+    "marked": "18.1.0",
+    "sanitize-html": "2.18.0"
+  }
+}

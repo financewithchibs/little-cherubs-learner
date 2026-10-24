@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Little Cherubs Admin</title>
+<meta name="robots" content="noindex">
+<link rel="icon" href="/assets/emblem.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,800&family=Great+Vibes&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=IBM+Plex+Mono:wght@500&display=swap">
+<link rel="stylesheet" href="/app.css">
+<style>
+  .app{max-width:1040px;padding-bottom:40px}
+  .anav{display:flex;gap:6px;flex-wrap:wrap;padding-block:10px}
+  .anav button{border:0;background:none;padding:8px 12px;border-radius:10px;font-weight:700;color:var(--muted)}
+  .anav button[aria-current="page"]{background:var(--brand-soft);color:var(--brand)}
+  .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;align-items:start}
+  .tiles6{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+  .admin-table{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+  .admin-table table{min-width:640px}
+  .admin-table td,.admin-table th{white-space:nowrap}
+  .admin-table td.wrap{white-space:normal;min-width:180px}
+  .copy{display:flex;gap:8px;align-items:center}
+  .copy input{flex:1;min-width:0;font:inherit;font-size:.85rem;padding:9px 10px;border:1px solid var(--line);border-radius:10px;background:var(--sunk);color:var(--ink)}
+  .uprow{display:grid;grid-template-columns:110px 1fr auto;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+  .uprow:first-child{border-top:0}
+  .warnlist{margin:0;padding-left:1.2em;font-size:.9rem}
+  .preview{max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:12px;padding:14px;background:var(--surface)}
+  @media (max-width:600px){.uprow{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app" id="app"><div class="loading">Loading…</div></div>
+<div class="toast" id="toast" hidden></div>
+<script src="/admin.js" type="module"></script>
+</body>
+</html>

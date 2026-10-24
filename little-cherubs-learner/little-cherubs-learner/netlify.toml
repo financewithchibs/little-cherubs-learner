@@ -8,7 +8,12 @@
 [functions]
   node_bundler = "esbuild"
 
-# The app is a single page. Any unknown path loads the app shell.
+# The admin area lives at /admin (with or without a slash at the end).
+[[redirects]]
+  from = "/admin"
+  to = "/admin.html"
+  status = 200
+
 [[redirects]]
   from = "/admin/*"
   to = "/admin.html"
@@ -21,3 +26,4 @@
     X-Content-Type-Options = "nosniff"
     Referrer-Policy = "same-origin"
     Permissions-Policy = "camera=(), microphone=(), geolocation=()"
+

@@ -5,7 +5,7 @@ html,body{margin:0;min-height:100%}
 :root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 img{max-width:100%}
 [hidden]{display:none!important}
-/* Layout: one phone-width app column, sticky screen header, fixed bottom tab bar; screens swap in place. */
+/* Layout: phone-width column with a bottom tab bar on phones; wider layout with a side tab rail on laptops (see end of file). */
 :root{
   --bg:#F4F5F8; --surface:#FFFFFF; --sunk:#E9EBF1; --ink:#1A2033; --muted:#5A6175; --line:#DADDE6;
   --brand:#24305C; --brand-ink:#FFFFFF; --brand-soft:#E3E7F4;
@@ -267,3 +267,25 @@ a.btn{text-decoration:none}
 .loading{padding:48px 16px;text-align:center;color:var(--muted)}
 .qtext{font-weight:400}
 .qtext p:first-child{font-weight:700}
+
+/* ---------- laptops and desktops (900px and wider) ---------- */
+@media (min-width:900px){
+  .app{max-width:1120px;padding-bottom:40px}
+  /* tab bar becomes a rail down the left side */
+  body:has(.tabs:not([hidden])){padding-left:104px}
+  .tabs{top:0;bottom:0;left:0;right:auto;width:104px;border-top:0;border-right:1px solid var(--line);padding:84px 0 0}
+  .tabs .in{max-width:none;margin:0;grid-template-columns:1fr;gap:6px;padding:0 10px}
+  .tab{padding:12px 4px;border-radius:12px;font-size:.8rem}
+  .tab[aria-current="page"]{background:var(--brand-soft)}
+  .toast{bottom:24px}
+  h1{font-size:2rem}
+  main{padding-block:28px}
+  /* sign-in and set-up forms stay a comfortable width */
+  .welcome{max-width:520px;margin-inline:auto}
+  /* grids use the extra space */
+  .parts{grid-template-columns:repeat(4,1fr)}
+  .tiles{grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+  main:has(> .concept){display:grid;grid-template-columns:1fr 1fr;align-items:start;gap:24px}
+  /* reading, practice and results pages keep a readable line length */
+  main:has(> article.content),main:has(.opt),main:has(.qtext),main:has(.score){max-width:860px;margin-inline:auto}
+}

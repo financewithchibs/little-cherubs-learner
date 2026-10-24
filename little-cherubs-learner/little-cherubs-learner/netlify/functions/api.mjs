@@ -623,8 +623,10 @@ export default async (req) => {
     return json({ error: "NOT_FOUND", message: "Not found." }, 404);
   } catch (e) {
     if (e instanceof HttpError) return json({ error: e.code, message: e.message }, e.status);
-    console.error(e);
-    return json({ error: "SERVER_ERROR", message: "Something went wrong on our side. Try again in a moment." }, 500);
+    console.error(`${req.method} ${path}`, e);
+    // Temporary while launching: show the technical reason so it can be reported.
+    const detail = `${e?.name || "Error"}: ${String(e?.message || e).slice(0, 240)} [${req.method} ${path}]`;
+    return json({ error: "SERVER_ERROR", message: `Something went wrong on our side. Try again in a moment. (Technical detail: ${detail})` }, 500);
   }
 };
 

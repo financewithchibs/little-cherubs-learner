@@ -212,16 +212,17 @@ async function Home() {
     ${days <= 10 ? `<div class="warn"><b>Your pass ends in ${plural(days, "day")} (${fmtD(d.pass.endsAt)}).</b><p style="font-size:.92rem">Ask your parent to renew so your learning carries on without a break. Your progress is always saved.</p></div>` : ""}
     ${n ? `<section class="hero">
       <div class="row"><span class="code">BIO-F${d.learner.form}-${esc(n.code)}</span><span class="grow"></span><span class="pill" style="background:rgba(255,255,255,.16);color:inherit">${n.parts}/4 done</span></div>
+      <span class="eyebrow" style="color:inherit;opacity:.85">Topic: ${esc(n.topic || "")}</span>
       <h2>${esc(n.title)}</h2>
       <div class="bar" aria-label="${n.parts} of 4 parts done"><i style="width:${n.parts * 25}%"></i></div>
       <button class="btn light" data-go="topic/${esc(n.code)}">${n.parts ? "Continue" : "Start"} learning ${I.chev}</button>
     </section>` : `<div class="box">Your first topic opens soon. Check back shortly.</div>`}
     <div class="stats">
-      <div class="stat"><b>${mastered}<span style="font-size:.9rem;color:var(--muted)">/${all.length}</span></b><span>topics mastered</span></div>
-      <div class="stat"><b>${open}</b><span>topics open now</span></div>
+      <div class="stat"><b>${mastered}<span style="font-size:.9rem;color:var(--muted)">/${all.length}</span></b><span>competences mastered</span></div>
+      <div class="stat"><b>${open}</b><span>competences open now</span></div>
       <div class="stat"><b style="font-variant-numeric:tabular-nums">${days}</b><span>days left on pass</span></div>
     </div>
-    ${soon.length ? `<section class="stack-s"><h3>Coming soon</h3><div class="list">${soon.map((x) => `<div class="item locked"><span class="dot">${I.lock}</span><span class="grow"><span class="code">BIO-F${d.learner.form}-${esc(x.code)}</span><span class="t">${esc(x.title)}</span></span><span class="pill">Soon</span></div>`).join("")}</div></section>` : ""}
+    ${soon.length ? `<section class="stack-s"><h3>Coming soon</h3><div class="list">${soon.map((x) => `<div class="item locked"><span class="dot">${I.lock}</span><span class="grow"><span class="code">BIO-F${d.learner.form}-${esc(x.code)} · ${esc(x.topic || "")}</span><span class="t">${esc(x.title)}</span></span><span class="pill">Soon</span></div>`).join("")}</div></section>` : ""}
   </main>`;
 }
 
@@ -229,12 +230,12 @@ async function Learn() {
   const d = await loadHome();
   if (!d.pass.active) return go("ended");
   const total = d.course.reduce((s, c) => s + c.competences.length, 0);
-  return `<header class="top"><div class="wrap"><div class="top-title"><div class="code">Form ${d.learner.form} · ${d.course.length} concepts · ${total} topics</div><b>${esc(d.subject)} course map</b></div></div></header>
+  return `<header class="top"><div class="wrap"><div class="top-title"><div class="code">Form ${d.learner.form} · ${d.course.length} concepts · ${total} competences</div><b>${esc(d.subject)} course map</b></div></div></header>
   <main class="wrap stack">${d.course.map((c) => `<section class="concept">
     <div class="concept-h"><span class="num">${c.no}</span><h3>${esc(c.name)}</h3></div>
     <div class="list">${c.competences.map((x) => x.available
-      ? `<button class="item" data-go="topic/${esc(x.code)}"><span class="dot ${x.mastered ? "done" : x.parts ? "on" : ""}">${x.mastered ? I.tick : x.parts + "/4"}</span><span class="grow"><span class="code">BIO-F${d.learner.form}-${esc(x.code)}</span><span class="t">${esc(x.title)}</span></span>${I.chev}</button>`
-      : `<div class="item locked"><span class="dot">${I.lock}</span><span class="grow"><span class="code">BIO-F${d.learner.form}-${esc(x.code)}</span><span class="t">${esc(x.title)}</span></span></div>`).join("")}</div>
+      ? `<button class="item" data-go="topic/${esc(x.code)}"><span class="dot ${x.mastered ? "done" : x.parts ? "on" : ""}">${x.mastered ? I.tick : x.parts + "/4"}</span><span class="grow"><span class="code">BIO-F${d.learner.form}-${esc(x.code)} · ${esc(x.topic || "")}</span><span class="t">${esc(x.title)}</span></span>${I.chev}</button>`
+      : `<div class="item locked"><span class="dot">${I.lock}</span><span class="grow"><span class="code">BIO-F${d.learner.form}-${esc(x.code)} · ${esc(x.topic || "")}</span><span class="t">${esc(x.title)}</span></span></div>`).join("")}</div>
   </section>`).join("")}</main>`;
 }
 
@@ -249,9 +250,13 @@ async function Topic(code) {
   const hasMedia = Object.keys(t.media).length > 0;
   const part = (to, ic, title, sub, done, extra) => `<button class="part" data-go="${to}/${esc(code)}"><span class="ic">${ic}</span><b>${title}</b><small>${sub}</small><span class="st">${done ? `<span class="pill on">${I.tick} ${extra || "Done"}</span>` : `<span class="pill">${extra || "Not started"}</span>`}</span></button>`;
   const smallest = hasMedia ? Math.min(...Object.values(t.media).map((m) => m.size)) / 1048576 : 0;
-  return backHeader(c.title, `BIO-F${c.form}-${code}`, "learn") + `<main class="wrap stack">
-    <div class="stack-s"><span class="eyebrow">Concept ${c.concept} · ${esc(c.conceptName)}</span><h1>${esc(c.title)}</h1></div>
-    <div class="box green"><span class="eyebrow">You can do this when</span><p style="margin-top:4px"><b>${esc(c.standard)}.</b></p></div>
+  return backHeader(c.topic, `BIO-F${c.form}-${code}`, "learn") + `<main class="wrap stack">
+    <div class="stack-s"><span class="eyebrow">Concept ${c.concept} · ${esc(c.conceptName)}</span><span class="eyebrow" style="margin-top:6px">Topic</span><h1>${esc(c.topic)}</h1></div>
+    <div class="box green"><dl class="kv comp">
+      <dt>Specific Competence</dt><dd>${esc(c.title)}</dd>
+      <dt>Competence ID</dt><dd class="code">BIO-F${c.form}-${esc(code)}</dd>
+      <dt>Expected Standard</dt><dd>${esc(c.standard)}</dd>
+    </dl></div>
     <div class="parts">
       ${part("lesson", I.book, "Lesson", "Explanations, worked examples and a quick check", p.lesson)}
       ${part("video", I.video, "Video", hasMedia ? `${esc(t.content.videoTitle || "Watch")} · from ${smallest.toFixed(1)} MB` : "Video coming soon · script available", p.video)}
@@ -259,7 +264,7 @@ async function Topic(code) {
       ${part("practice", I.quiz, "Practice", `${t.content.questions.length} questions · ${t.content.totalMarks} marks`, p.best != null, p.best != null ? `Best ${p.best}/${t.content.totalMarks}` : "")}
     </div>
     ${p.mastery ? `<div class="box ${p.mastery === "Mastered" ? "green" : "cop"}"><b>${p.mastery}</b><p class="muted" style="font-size:.9rem">Mastered means 70% or more on practice.</p></div>`
-      : `<p class="muted" style="font-size:.9rem">Do the lesson first, then practise. You master a topic at 70%.</p>`}
+      : `<p class="muted" style="font-size:.9rem">Do the lesson first, then practise. You master a competence at 70%.</p>`}
   </main>`;
 }
 
@@ -474,8 +479,8 @@ async function ParentHome() {
     ${d.learners.map((s) => `<section class="card stack-s">
       <div class="row"><span class="av kid sm">${initial(s.name)}</span><div class="grow"><b>${esc(s.name)}</b><div class="muted" style="font-size:.85rem">Form ${s.form} · Biology</div></div><button class="btn alt" style="min-height:38px;padding:6px 12px;font-size:.85rem" data-go="report/${esc(s.id)}">Full report</button></div>
       <div class="stats" style="margin-top:6px">
-        <div class="stat"><b>${s.totals.mastered}<span style="font-size:.9rem;color:var(--muted)">/${s.totals.competences}</span></b><span>topics mastered</span></div>
-        <div class="stat"><b>${s.totals.started}</b><span>topics started</span></div>
+        <div class="stat"><b>${s.totals.mastered}<span style="font-size:.9rem;color:var(--muted)">/${s.totals.competences}</span></b><span>competences mastered</span></div>
+        <div class="stat"><b>${s.totals.started}</b><span>competences started</span></div>
         <div class="stat"><b>${s.lastAttempt ? Math.round((s.lastAttempt.total / s.lastAttempt.max) * 100) + "%" : "–"}</b><span>last practice</span></div>
       </div>
     </section>`).join("")}
@@ -506,8 +511,8 @@ async function Report(id) {
       <dt>Pass</dt><dd>${s.pass.active ? `${plural(s.pass.daysLeft, "day")} left` : s.pass.endsAt ? "Ended " + fmtD(s.pass.endsAt) : "No pass yet"}</dd></dl></section>
     <section class="card stack"><h3>Skills in the last practice</h3>${la ? aoBars(la.ao, la.aoMax) + `<p class="muted" style="font-size:.85rem">${fmtD(la.at)} · ${la.total} of ${la.max} marks</p>` : `<p class="muted">${esc(s.name)} hasn't finished a practice set yet.</p>`}</section>
     ${weak && weak[1] < 1 ? `<section class="box green stack-s"><h3>How you can help this week</h3><p>${help[weak[0]]}</p></section>` : ""}
-    <section class="stack-s"><h3>Topics</h3>${d.topics.length ? d.topics.map((t) => `<div class="card stack-s"><span class="code">BIO-F${s.form}-${esc(t.code)}</span><b>${esc(t.title)}</b>
-      <div class="row" style="flex-wrap:wrap;gap:6px">${pills(t.lesson, "Lesson")}${pills(t.video, "Video")}${pills(t.prac, "Practical")}${pills(t.best != null, t.best != null ? `Best ${t.best}/${t.total}` : "Practice")}</div></div>`).join("") : `<p class="muted">No topics open yet.</p>`}</section>
+    <section class="stack-s"><h3>Competences</h3>${d.topics.length ? d.topics.map((t) => `<div class="card stack-s"><span class="code">BIO-F${s.form}-${esc(t.code)} · ${esc(t.topic || "")}</span><b>${esc(t.title)}</b>
+      <div class="row" style="flex-wrap:wrap;gap:6px">${pills(t.lesson, "Lesson")}${pills(t.video, "Video")}${pills(t.prac, "Practical")}${pills(t.best != null, t.best != null ? `Best ${t.best}/${t.total}` : "Practice")}</div></div>`).join("") : `<p class="muted">No competences open yet.</p>`}</section>
     <section class="card"><h3 style="margin-bottom:6px">Recent activity</h3>${s.log.length ? s.log.map((e) => `<div class="log"><time>${fmtShort(e.at)}</time><span>${esc(e.text)}</span></div>`).join("") : `<p class="muted">No activity yet.</p>`}</section>
   </main>`;
 }

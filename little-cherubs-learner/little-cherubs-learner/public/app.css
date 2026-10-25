@@ -289,3 +289,6 @@ a.btn{text-decoration:none}
   /* reading, practice and results pages keep a readable line length */
   main:has(> article.content),main:has(.opt),main:has(.qtext),main:has(.score){max-width:860px;margin-inline:auto}
 }
+.kv.comp{grid-template-columns:auto 1fr;gap:8px 16px;margin:0}
+.kv.comp dd.code{font-size:.85rem;color:var(--ink);font-weight:700}
+@media (max-width:520px){.kv.comp{grid-template-columns:1fr;gap:2px}.kv.comp dd{margin-bottom:8px}}

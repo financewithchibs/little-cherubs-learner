@@ -79,7 +79,8 @@ function courseFor(form, codes, prog) {
       const cp = prog?.comps?.[x.code];
       return { code: x.code, title: x.title, topic: x.topic, topicCode: x.topicCode, standard: x.standard, available: codes.has(x.code),
         parts: cp ? [cp.lesson, cp.video, cp.prac, cp.best != null].filter(Boolean).length : 0,
-        best: cp?.best ?? null, mastered: cp?.mastered || false };
+        best: cp?.best ?? null, total: cp?.total ?? null, mastered: cp?.mastered || false,
+        touchedAt: cp ? (cp.touchedAt || (cp.attempts || []).reduce((m, a) => Math.max(m, a.at || 0), 0)) : 0 };
     }),
   }));
 }
@@ -288,8 +289,14 @@ on("GET", "/api/learner/home", async (req) => {
   const prog = await core.getProgress(learner.id);
   const course = courseFor(learner.form, await contentCodes(), prog);
   const flat = course.flatMap((c) => c.competences.map((x) => ({ ...x, concept: c.no, conceptName: c.name })));
-  const next = flat.find((x) => x.available && !x.mastered) || flat.find((x) => x.available) || null;
-  return { learner: { id: learner.id, name: learner.name, form: learner.form }, pass, course, next, subject: curriculum.subjectName, renewUrl: renewUrl() };
+  // Started but not mastered, most recently worked on first.
+  const started = flat.filter((x) => x.available && x.parts > 0 && !x.mastered)
+    .sort((a, b) => b.touchedAt - a.touchedAt || flat.indexOf(a) - flat.indexOf(b));
+  const nextNew = flat.find((x) => x.available && x.parts === 0) || null;
+  const next = started[0] || nextNew || flat.find((x) => x.available && !x.mastered) || flat.find((x) => x.available) || null;
+  const inProgress = started.filter((x) => x !== next).slice(0, 3);
+  return { learner: { id: learner.id, name: learner.name, form: learner.form }, pass, course, next, inProgress,
+    nextNew: nextNew && nextNew !== next ? nextNew : null, subject: curriculum.subjectName, renewUrl: renewUrl() };
 });
 
 on("GET", "/api/learner/topic/:code", async (req, p) => {
@@ -314,11 +321,12 @@ on("POST", "/api/learner/progress/:code", async (req, p) => {
   if (!comp) fail(404, "NO_TOPIC", "Topic not found.");
   const prog = await core.getProgress(learner.id);
   const cp = core.compProgress(prog, p.code);
+  cp.touchedAt = Date.now();
   if (!cp[part]) {
     cp[part] = true;
     core.logActivity(prog, { lesson: "Finished the lesson", video: "Watched the video", prac: "Completed the practical" }[part] + `: ${comp.title}`);
-    await core.saveProgress(learner.id, prog);
   }
+  await core.saveProgress(learner.id, prog);
   return { ok: true };
 });
 
@@ -337,7 +345,7 @@ on("POST", "/api/learner/practice/:code/answer", async (req, p) => {
   const prog = await core.getProgress(learner.id);
   const cp = core.compProgress(prog, p.code);
   cp.current = cp.current || { mcq: {} };
-  if (cp.current.mcq[qid] == null) { cp.current.mcq[qid] = Number(choice); await core.saveProgress(learner.id, prog); }
+  if (cp.current.mcq[qid] == null) { cp.current.mcq[qid] = Number(choice); cp.touchedAt = Date.now(); await core.saveProgress(learner.id, prog); }
   const chosen = cp.current.mcq[qid];
   return { choice: chosen, correct: chosen === q.answer, answer: q.answer, explanationHtml: q.explanationHtml };
 });
@@ -376,6 +384,7 @@ on("POST", "/api/learner/practice/:code/finish", async (req, p) => {
   cp.total = c.totalMarks;
   cp.mastered = cp.best / c.totalMarks >= core.MASTERY;
   cp.current = { mcq: {} };
+  cp.touchedAt = attempt.at;
   core.logActivity(prog, `Practice on ${c.title}: ${total} of ${c.totalMarks} marks`);
   await core.saveProgress(learner.id, prog);
   return { attempt, best: cp.best, mastery: core.mastery(cp, c.totalMarks) };

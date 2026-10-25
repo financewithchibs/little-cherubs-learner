@@ -234,6 +234,16 @@ try {
   assert.equal((await admin("GET", "/api/admin/overview")).data.counts.trialsBought, 1);
   step("buying the 90-Day Access after the trial unlocks 90 days on the same account");
 
+  // Feedback from a signed-in learner reaches the admin Feedback page.
+  assert.equal((await client()("POST", "/api/feedback", { rating: 5, text: "x" })).status, 401, "must be signed in");
+  assert.equal((await tri("POST", "/api/feedback", { rating: 0, text: "" })).data.error, "EMPTY");
+  assert.equal((await tri("POST", "/api/feedback", { rating: 4, text: "Clear lessons.\nVideo was slow to start.", page: "topic/1.3.1.1" })).status, 200);
+  const fb = await admin("GET", "/api/admin/feedback");
+  assert.equal(fb.data.count, 1); assert.equal(fb.data.average, 4);
+  assert.equal(fb.data.feedback[0].from, "learner"); assert.equal(fb.data.feedback[0].learnerName, "Natasha");
+  assert.equal(fb.data.feedback[0].text, "Clear lessons. Video was slow to start.");
+  step("feedback from a learner is saved with rating, comment and page, and shown to admin");
+
   console.log(`\nAll ${passed} checks passed.`);
 } catch (e) {
   console.error("\nTEST FAILED:", e);

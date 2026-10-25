@@ -179,6 +179,25 @@ on("POST", "/api/trial/start", async (req) => {
   return json(meView(s, family), 200, { "set-cookie": cookie(SID, s.sid) });
 });
 
+/* --- feedback from parents and learners (early access) --- */
+on("POST", "/api/feedback", async (req) => {
+  const { s, family } = await requireSession(req);
+  const rl = await rateLimit("feedback:" + family.id, 10, 60);
+  const b = await readJSON(req);
+  const rating = Math.round(Number(b.rating) || 0);
+  const text = cleanText(String(b.text || "").replace(/\s+/g, " "), 1000);
+  if (!(rating >= 1 && rating <= 5) && !text) fail(400, "EMPTY", "Choose a rating or write a comment.");
+  await rl.bad(); // at most 10 messages an hour per family
+  const learner = s.role === "learner" ? core.findLearner(family, s.learnerId) : null;
+  const entry = { at: Date.now(), familyId: family.id, email: family.email, parentName: family.parentName,
+    from: learner ? "learner" : "parent", learnerName: learner?.name || null, form: learner?.form || null,
+    trial: family.learners.some((l) => core.passStatus(l).trial), rating: rating >= 1 && rating <= 5 ? rating : null,
+    text, page: cleanText(b.page, 80) };
+  await logs().setJSON(`feedback/${String(entry.at).padStart(15, "0")}-${newId(4)}`, entry);
+  await notify({ type: "feedback", ...entry });
+  return { ok: true };
+});
+
 on("POST", "/api/auth/forgot", async (req) => {
   const { email } = await readJSON(req);
   const e = normEmail(email);
@@ -489,6 +508,7 @@ on("GET", "/api/admin/overview", async (req) => {
       trialsBought: fams.filter((f) => f.trial && f.payments.length).length,
       endingSoon: learners.filter((x) => x.pass.active && x.pass.daysLeft <= 10).length,
       ended: learners.filter((x) => !x.pass.active && x.pass.endsAt).length,
+      feedback: (await logs().list("feedback/")).length,
       sales30: sales.filter((s) => s.at > month && s.result && !s.result.startsWith("rejected") && !s.result.startsWith("duplicate")).length,
     },
     endingSoon: learners.filter((x) => x.pass.active && x.pass.daysLeft <= 10)
@@ -576,6 +596,15 @@ on("POST", "/api/admin/sale", async (req) => {
   const b = await readJSON(req);
   if (!isEmail(normEmail(b.email))) fail(400, "EMAIL", "Enter the buyer's email address.");
   return core.recordSale({ ...b, reference: b.reference || `manual-${newId(6)}` }, { siteUrl: siteUrl(req), source: "manual" });
+});
+
+on("GET", "/api/admin/feedback", async (req) => {
+  await requireAdmin(req);
+  const keys = (await logs().list("feedback/")).slice(-300);
+  const items = (await Promise.all(keys.map((k) => logs().getJSON(k)))).filter(Boolean).reverse();
+  const rated = items.filter((x) => x.rating);
+  return { feedback: items, count: items.length,
+    average: rated.length ? Math.round((rated.reduce((s, x) => s + x.rating, 0) / rated.length) * 10) / 10 : null };
 });
 
 on("GET", "/api/admin/sales", async (req) => {

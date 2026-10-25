@@ -77,7 +77,7 @@ function courseFor(form, codes, prog) {
     no: c.no, name: c.name,
     competences: c.competences.map((x) => {
       const cp = prog?.comps?.[x.code];
-      return { code: x.code, title: x.title, available: codes.has(x.code),
+      return { code: x.code, title: x.title, topic: x.topic, topicCode: x.topicCode, standard: x.standard, available: codes.has(x.code),
         parts: cp ? [cp.lesson, cp.video, cp.prac, cp.best != null].filter(Boolean).length : 0,
         best: cp?.best ?? null, mastered: cp?.mastered || false };
     }),
@@ -236,7 +236,7 @@ on("GET", "/api/parent/report/:learnerId", async (req, p) => {
   for (const c of courseFor(l.form, codes, prog)) for (const x of c.competences) {
     if (!x.available && !x.parts) continue;
     const cp = prog.comps[x.code];
-    topics.push({ code: x.code, title: x.title, concept: c.name, lesson: !!cp?.lesson, video: !!cp?.video, prac: !!cp?.prac,
+    topics.push({ code: x.code, title: x.title, topic: x.topic, concept: c.name, lesson: !!cp?.lesson, video: !!cp?.video, prac: !!cp?.prac,
       best: cp?.best ?? null, total: cp?.total ?? null, attempts: cp?.attempts?.length || 0, last: cp?.attempts?.at(-1) || null });
   }
   return { learner: await learnerSummary(l), topics };

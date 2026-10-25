@@ -215,9 +215,10 @@ function Who() {
     </div>
     ${pinFor ? `<form class="card stack" data-form="pin"><h3 class="center">Enter your parent PIN</h3>
       <div class="pinrow">${[0, 1, 2, 3].map((i) => `<input inputmode="numeric" maxlength="1" aria-label="PIN digit ${i + 1}" data-pin="${i}" autocomplete="off">`).join("")}</div>
-      <div id="formerr"></div><button class="btn block" type="submit">Open parent area</button></form>` : ""}
+      <div id="formerr"></div><button class="btn block" type="submit">Open parent area</button>
+      <button class="linkbtn" type="button" data-act="forgotpin">Forgotten your PIN?</button></form>` : ""}
     <div id="whoerr"></div>
-    <button class="btn alt" data-act="signout">Sign out</button>
+    ${f.learners.length ? `<p class="muted center" style="font-size:.85rem">To sign out of this device, open the parent area.</p>` : `<button class="btn alt" data-act="signout">Sign out</button>`}
   </main>`;
 }
 
@@ -600,8 +601,9 @@ async function Pass() {
     <section class="card stack-s"><h3>What happens when a pass ends</h3>
       <ul style="margin:0;padding-left:1.2em;font-size:.92rem"><li>Lessons, videos and practice lock on the end date.</li><li>Progress and scores stay saved.</li><li>Renewing adds 90 days and unlocks everything straight away.</li></ul></section>
     <form class="card stack" data-form="newpin"><h3>Change parent PIN</h3><div class="field"><label for="np">New 4-digit PIN</label><input id="np" name="pin" inputmode="numeric" pattern="\\d{4}" maxlength="4" required></div><div id="formerr"></div><button class="btn alt" type="submit">Save PIN</button></form>
-    <p class="muted" style="font-size:.88rem">Signed in as ${esc(f.email)}.</p>
-    <button class="btn alt block" data-act="signout">Sign out</button>
+    <section class="card stack-s"><h3>Sign out of this device</h3>
+      <p class="muted" style="font-size:.9rem">Signed in as ${esc(f.email)}. Signing out logs this device out of the family account. You'll need your email and password to sign in again. Your children's progress is kept.</p>
+      <button class="btn alt block" data-act="signout">Sign out</button></section>
   </main>`;
 }
 
@@ -690,6 +692,12 @@ document.addEventListener("click", async (e) => {
       case "pin-show": pinFor = true; render(); break;
       case "switch": me = await api("POST", "/api/session/clear"); pinFor = false; parentData = null; go("who"); break;
       case "reclaim": await chooseLearner(me.session.learnerId); break;
+      case "forgotpin": {
+        el.disabled = true;
+        const r = await api("POST", "/api/auth/forgot", { email: me.family.email });
+        toast(r.sent ? "We've sent a link to set a new PIN to your email and WhatsApp" : "We couldn't send the link. Contact Little Cherubs for help.");
+        el.disabled = false; break;
+      }
       case "signout": await api("POST", "/api/auth/logout"); me = { signedIn: false, renewUrl: me?.renewUrl }; pinFor = false; go("signin"); break;
       case "done": el.disabled = true; await markDone(code, el.dataset.part, { lesson: "Lesson complete", video: "Video watched", prac: "Practical complete" }[el.dataset.part]); break;
       case "quality": pref.set("quality", el.dataset.q); render(); break;

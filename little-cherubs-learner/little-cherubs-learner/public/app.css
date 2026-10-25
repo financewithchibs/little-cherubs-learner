@@ -9,7 +9,7 @@ img{max-width:100%}
 :root{
   --bg:#F4F5F8; --surface:#FFFFFF; --sunk:#E9EBF1; --ink:#1A2033; --muted:#5A6175; --line:#DADDE6;
   --brand:#24305C; --brand-ink:#FFFFFF; --brand-soft:#E3E7F4;
-  --gold:#946A12; --gold-soft:#F6ECD4; --gold-bright:#D2A43A;
+  --gold:#946A12; --gold-soft:#F6ECD4; --gold-bright:#D2A43A; --gold-hover:#F2DFA7; --on-gold:#24305C;
   --good:#1D7A45; --good-soft:#DDF1E4; --bad:#B02A22; --bad-soft:#F8DEDB; --warn:#8F5A00;
   --shadow:0 1px 2px rgba(26,32,51,.08),0 4px 14px rgba(26,32,51,.06);
   --f-display:"Fraunces",Georgia,"Times New Roman",serif;
@@ -21,14 +21,14 @@ img{max-width:100%}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0E111A; --surface:#161B27; --sunk:#1D2433; --ink:#E8EAF0; --muted:#A0A8BA; --line:#2B3446;
   --brand:#9DB0EC; --brand-ink:#0D1325; --brand-soft:#1E2742;
-  --gold:#E8BF5F; --gold-soft:#3A2E14; --gold-bright:#E8BF5F;
+  --gold:#E8BF5F; --gold-soft:#3A2E14; --gold-bright:#E8BF5F; --gold-hover:#E8C977; --on-gold:#1A1406;
   --good:#5BD08F; --good-soft:#163222; --bad:#F2867D; --bad-soft:#3A1A17; --warn:#E6B357;
   --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark;
 }}
 :root[data-theme="dark"]{
   --bg:#0E111A; --surface:#161B27; --sunk:#1D2433; --ink:#E8EAF0; --muted:#A0A8BA; --line:#2B3446;
   --brand:#9DB0EC; --brand-ink:#0D1325; --brand-soft:#1E2742;
-  --gold:#E8BF5F; --gold-soft:#3A2E14; --gold-bright:#E8BF5F;
+  --gold:#E8BF5F; --gold-soft:#3A2E14; --gold-bright:#E8BF5F; --gold-hover:#E8C977; --on-gold:#1A1406;
   --good:#5BD08F; --good-soft:#163222; --bad:#F2867D; --bad-soft:#3A1A17; --warn:#E6B357;
   --shadow:0 1px 2px rgba(0,0,0,.4); color-scheme:dark;
 }
@@ -298,3 +298,13 @@ a.btn{text-decoration:none}
 .kv.comp{grid-template-columns:auto 1fr;gap:8px 16px;margin:0}
 .kv.comp dd.code{font-size:.85rem;color:var(--ink);font-weight:700}
 @media (max-width:520px){.kv.comp{grid-template-columns:1fr;gap:2px}.kv.comp dd{margin-bottom:8px}}
+
+/* Hover: every button turns light gold (brand colour). Only on devices with a
+   real pointer, so taps on phones don't leave a button stuck in gold. The
+   on/off switch keeps its own colours because they show its state. */
+button,a.btn{transition:background-color .15s,color .15s,border-color .15s}
+@media (hover:hover){
+  button:not(:disabled):not(.sw):hover,a.btn:hover{background:var(--gold-hover);color:var(--on-gold);border-color:var(--gold-bright)}
+  .mark:hover img{border-color:var(--gold-bright)}
+}
+

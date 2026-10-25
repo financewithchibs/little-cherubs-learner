@@ -117,9 +117,37 @@ function SignIn() {
       <button class="btn block" type="submit">Sign in</button>
       <button class="linkbtn" type="button" data-go="forgot">Forgotten your password?</button>
     </form>
-    <div class="box stack-s"><b>New to Little Cherubs Learner?</b>
-      <p style="font-size:.92rem">Buy a 90-day pass on Selar. Your set-up link arrives by email within minutes of paying.</p>
-      <a class="btn alt" href="${esc(me?.renewUrl || "#")}" target="_blank" rel="noopener">Buy a 90-day pass</a></div>
+    <div class="box green stack-s"><b>New to Little Cherubs Learner?</b>
+      <p style="font-size:.92rem">Try everything free for ${me?.trial?.days || 7} days: lessons, videos, practicals and practice questions. No payment needed to start.</p>
+      <button class="btn" data-go="trial">Start your ${me?.trial?.days || 7}-day free trial ${I.chev}</button></div>
+    <div class="box stack-s"><b>Ready to buy?</b>
+      <p style="font-size:.92rem">Buy the 90-Day Access on Selar. Your set-up link arrives by email within minutes of paying.</p>
+      <a class="btn alt" href="${esc(me?.renewUrl || "#")}" target="_blank" rel="noopener">Buy the 90-Day Access</a></div>
+  </main>`;
+}
+
+function Trial() {
+  const tr = me?.trial || { days: 7, forms: [1] };
+  return brandHeader() + `<main class="wrap welcome">
+    <img class="logo" src="/assets/logo.png" alt="Little Cherubs logo" style="width:110px;height:110px">
+    <div class="stack-s center"><h1>Start your ${tr.days}-day free trial</h1><p class="muted">Full access for ${tr.days} days. No payment needed. After the trial, buy the 90-Day Access to carry on, and your child keeps all their progress.</p></div>
+    <form class="card stack" data-form="trial">
+      <h3>You, the parent</h3>
+      <div class="field"><label for="tn">Your name</label><input id="tn" name="parentName" autocomplete="name" required></div>
+      <div class="field"><label for="te">Email address</label><input id="te" name="email" type="email" autocomplete="email" required>
+        <span class="muted" style="font-size:.85rem">Use this same email when you buy on Selar, so the 90 days are added to this account.</span></div>
+      <div class="field"><label for="tp">WhatsApp number</label><input id="tp" name="phone" inputmode="tel" autocomplete="tel" placeholder="e.g. 0977 123 456" required>
+        <span class="muted" style="font-size:.85rem">We send a reminder before the trial ends. One free trial per number.</span></div>
+      <div class="field"><label for="tpw">Choose a password (8 or more characters)</label><input id="tpw" name="password" type="password" minlength="8" autocomplete="new-password" required></div>
+      <div class="field"><label for="tpin">Choose a 4-digit parent PIN</label><input id="tpin" name="pin" inputmode="numeric" pattern="\\d{4}" maxlength="4" required>
+        <span class="muted" style="font-size:.85rem">The PIN keeps the parent area private from your child.</span></div>
+      <h3>Your child</h3>
+      <div class="field"><label for="tl">Child's first name</label><input id="tl" name="learnerName" required></div>
+      <div class="field"><label for="tf">Form</label><select id="tf" name="form">${tr.forms.map((f) => `<option value="${f}">Form ${f}</option>`).join("")}</select></div>
+      <div id="formerr"></div>
+      <button class="btn block" type="submit">Start free trial</button>
+      <button class="linkbtn" type="button" data-go="signin">I already have an account</button>
+    </form>
   </main>`;
 }
 
@@ -246,7 +274,8 @@ async function Home() {
   const hr = new Date().getHours();
   return learnerHeader() + `<main class="wrap stack">
     <div class="stack-s"><span class="eyebrow">${fmtD(Date.now())} · Form ${d.learner.form} ${esc(d.subject)}</span><h1>Good ${hr < 12 ? "morning" : hr < 17 ? "afternoon" : "evening"}, ${esc(d.learner.name)}</h1></div>
-    ${days <= 10 ? `<div class="warn"><b>Your pass ends in ${plural(days, "day")} (${fmtD(d.pass.endsAt)}).</b><p style="font-size:.92rem">Ask your parent to renew so your learning carries on without a break. Your progress is always saved.</p></div>` : ""}
+    ${d.pass.trial ? `<div class="box green stack-s"><b>Free trial: ${plural(days, "day")} left (ends ${fmtD(d.pass.endsAt)}).</b><p style="font-size:.92rem">Enjoy everything during your trial. To keep learning after it ends, ask your parent to buy the 90-Day Access. Your progress is always saved.</p><a class="btn alt" href="${esc(d.renewUrl)}" target="_blank" rel="noopener">Buy the 90-Day Access</a></div>`
+    : days <= 10 ? `<div class="warn"><b>Your pass ends in ${plural(days, "day")} (${fmtD(d.pass.endsAt)}).</b><p style="font-size:.92rem">Ask your parent to renew so your learning carries on without a break. Your progress is always saved.</p></div>` : ""}
     ${n ? heroCard(d, n) : `<div class="box">Your first topic opens soon. Check back shortly.</div>`}
     ${n ? moreToLearn(d) : ""}
     <div class="stats">
@@ -459,9 +488,10 @@ function Ended() {
   return `<header class="top"><div class="wrap">${wordmark()}<button class="av kid sm" data-act="switch" aria-label="Switch profile">${initial(l?.name)}</button></div></header>
   <main class="wrap welcome">
     <div class="av kid" style="align-self:center">${I.lock}</div>
-    <div class="stack-s center"><h1>${end ? "Your pass has ended" : "Your pass hasn't started yet"}</h1>
+    <div class="stack-s center"><h1>${!end ? "Your pass hasn't started yet" : l.pass.trial ? "Your free trial has ended" : "Your pass has ended"}</h1>
       <p class="muted">${end ? `It ended on ${fmtD(end)}. Everything you've learned and all your scores are saved.` : "Ask your parent to add a pass for you in the parent area."}</p></div>
-    <div class="box stack-s"><b>Ask your parent to renew.</b><p style="font-size:.92rem">When they renew, you'll pick up exactly where you left off.</p></div>
+    <div class="box stack-s"><b>${l?.pass?.trial ? "Ask your parent to buy the 90-Day Access." : "Ask your parent to renew."}</b><p style="font-size:.92rem">When they do, you'll pick up exactly where you left off.</p>
+      <a class="btn" href="${esc(me?.renewUrl || "#")}" target="_blank" rel="noopener">Buy the 90-Day Access</a></div>
     <button class="btn alt" data-act="switch">Switch profile</button>
   </main>`;
 }
@@ -478,7 +508,15 @@ function parentHeader(sub) {
 
 function passCard(l, renewUrl) {
   const p = l.pass;
-  if (!p.endsAt) return `<section class="warn"><b>${esc(l.name)} has no pass yet.</b><p style="font-size:.92rem">Buy a pass on Selar with the email you sign in with, and it will be added here.</p><a class="btn" href="${esc(renewUrl)}" target="_blank" rel="noopener">Buy a 90-day pass</a></section>`;
+  if (!p.endsAt) return `<section class="warn"><b>${esc(l.name)} has no pass yet.</b><p style="font-size:.92rem">Buy the 90-Day Access on Selar with the email you sign in with, and it will be added here.</p><a class="btn" href="${esc(renewUrl)}" target="_blank" rel="noopener">Buy the 90-Day Access</a></section>`;
+  if (p.trial && !p.active) return `<section class="alert"><span class="eyebrow" style="color:var(--bad)">Free trial ended</span><h2>${esc(l.name)}'s free trial ended on ${fmtD(p.endsAt)}</h2><p style="font-size:.92rem">Learning is locked, but all progress is saved. Buy the 90-Day Access to pick up exactly where ${esc(l.name)} left off.</p><a class="btn" href="${esc(renewUrl)}" target="_blank" rel="noopener">Buy the 90-Day Access</a><p class="muted" style="font-size:.82rem">Use the same email address you sign in with. The 90 days are added within minutes.</p></section>`;
+  if (p.trial) return `<section class="box green stack-s">
+    <div class="row"><span class="eyebrow grow">${esc(l.name)} · Form ${l.form}</span><span class="pill on">Free trial</span></div>
+    <h2 style="font-variant-numeric:tabular-nums">${plural(p.daysLeft, "day")} of free trial left</h2>
+    <p class="muted" style="font-size:.88rem">Trial ends ${fmtD(p.endsAt)}. Buy now and the 90 days are added on top of the trial days left.</p>
+    <a class="btn" href="${esc(renewUrl)}" target="_blank" rel="noopener">Buy the 90-Day Access</a>
+    <p class="muted" style="font-size:.82rem">Use the same email address you sign in with.</p>
+  </section>`;
   if (!p.active) return `<section class="alert"><span class="eyebrow" style="color:var(--bad)">Pass ended</span><h2>${esc(l.name)}'s pass ended on ${fmtD(p.endsAt)}</h2><p style="font-size:.92rem">Learning is locked, but all progress is saved. Renew to pick up exactly where ${esc(l.name)} left off.</p><a class="btn" href="${esc(renewUrl)}" target="_blank" rel="noopener">Renew on Selar</a><p class="muted" style="font-size:.82rem">Use the same email address you sign in with. The new 90 days are added within minutes.</p></section>`;
   const total = Math.max(1, Math.round((p.endsAt - (p.startedAt || p.endsAt - 90 * 864e5)) / 864e5));
   const used = Math.min(100, Math.max(0, ((total - p.daysLeft) / total) * 100));
@@ -516,7 +554,7 @@ async function ParentHome() {
         <div class="stat"><b>${s.lastAttempt ? Math.round((s.lastAttempt.total / s.lastAttempt.max) * 100) + "%" : "–"}</b><span>last practice questions score</span></div>
       </div>
     </section>`).join("")}
-    <section class="stack-s"><h3>Reminders</h3><p class="muted" style="font-size:.92rem">You'll get a WhatsApp message and an email 10 days and 2 days before a pass ends, with a link to renew on Selar.</p></section>
+    <section class="stack-s"><h3>Reminders</h3><p class="muted" style="font-size:.92rem">You'll get a WhatsApp message and an email 10 days and 2 days before a pass ends, with a link to renew on Selar. During a free trial, you get one 2 days before it ends and one when it ends.</p></section>
     <form class="card stack" data-form="addchild"><h3>Add another child</h3>
       <div class="field"><label for="cn">First name</label><input id="cn" name="name" required></div>
       <div class="field"><label for="cf">Form</label><select id="cf" name="form">${[1, 2, 3, 4].map((x) => `<option value="${x}">Form ${x}</option>`).join("")}</select></div>
@@ -540,7 +578,7 @@ async function Report(id) {
     ${tabsKids}
     <section class="card stack-s"><h3>Form ${s.form} Biology</h3>
       <dl class="kv"><dt>Topics open</dt><dd>${s.totals.open} of ${s.totals.competences}</dd><dt>Topics started</dt><dd>${s.totals.started}</dd><dt>Topics mastered</dt><dd>${s.totals.mastered}</dd>
-      <dt>Pass</dt><dd>${s.pass.active ? `${plural(s.pass.daysLeft, "day")} left` : s.pass.endsAt ? "Ended " + fmtD(s.pass.endsAt) : "No pass yet"}</dd></dl></section>
+      <dt>Pass</dt><dd>${s.pass.active ? `${s.pass.trial ? "Free trial · " : ""}${plural(s.pass.daysLeft, "day")} left` : s.pass.endsAt ? (s.pass.trial ? "Trial ended " : "Ended ") + fmtD(s.pass.endsAt) : "No pass yet"}</dd></dl></section>
     <section class="card stack"><h3>Skills in the last practice questions</h3>${la ? aoBars(la.ao, la.aoMax) + `<p class="muted" style="font-size:.85rem">${fmtD(la.at)} · ${la.total} of ${la.max} marks (${Math.round((la.total / la.max) * 100)}%)</p>` : `<p class="muted">${esc(s.name)} hasn't finished a set of practice questions yet.</p>`}</section>
     ${weak && weak[1] < 1 ? `<section class="box green stack-s"><h3>How you can help this week</h3><p>${help[weak[0]]}</p></section>` : ""}
     <section class="stack-s"><h3>Competences</h3>${d.topics.length ? d.topics.map((t) => `<div class="card stack-s"><span class="code">BIO-F${s.form}-${esc(t.code)} · ${esc(t.topic || "")}</span><b>${esc(t.title)}</b>
@@ -570,7 +608,7 @@ async function Pass() {
 /* ===================================================================== */
 /* Router                                                                 */
 /* ===================================================================== */
-const SIGNED_OUT = { signin: SignIn, forgot: Forgot, setup: SetUp, reset: Reset };
+const SIGNED_OUT = { signin: SignIn, trial: Trial, forgot: Forgot, setup: SetUp, reset: Reset };
 const LEARNER = { home: Home, learn: Learn, topic: Topic, lesson: Lesson, video: Video, practical: Practical, practice: Practice, results: Results, data: Data, ended: Ended };
 const PARENT = { parent: ParentHome, report: Report, pass: Pass };
 
@@ -596,7 +634,7 @@ async function render() {
 }
 
 function handleError(e) {
-  if (!(e instanceof ApiError)) { console.error(e); $("#app").innerHTML = `<main class="wrap stack" style="padding-top:40px">${errBox("Something went wrong. Refresh the page to try again.")}</main>`; return; }
+  if (!(e instanceof ApiError)) { console.error(e); $("#app").innerHTML = brandHeader() + `<main class="wrap stack" style="padding-top:40px">${errBox("Something went wrong. Refresh the page to try again.")}</main>`; return; }
   if (e.code === "SIGNED_OUT") { me = { signedIn: false, renewUrl: me?.renewUrl }; return go("signin"); }
   if (e.code === "CHOOSE_PROFILE" || e.code === "PARENT_PIN") { if (me) me.session.role = null; return go("who"); }
   if (e.code === "PASS_ENDED") return go("ended");
@@ -730,6 +768,7 @@ document.addEventListener("submit", async (e) => {
       const r = await api("POST", "/api/auth/forgot", data);
       f.outerHTML = `<div class="ok-note">If that email has an account, a reset link is on its way${r.sent ? "" : ". If it doesn't arrive within an hour, contact Little Cherubs on WhatsApp and we'll send one"}.</div><button class="btn alt" data-go="signin">Back to sign in</button>`;
     }
+    else if (kind === "trial") { me = await api("POST", "/api/trial/start", data); toast(`Your ${me.trial?.days || 7}-day free trial has started`); go("who"); }
     else if (kind === "setup") { me = await api("POST", "/api/setup/" + encodeURIComponent(f.dataset.token), data); toast("Account created"); go("who"); }
     else if (kind === "reset") { me = await api("POST", "/api/auth/reset/" + encodeURIComponent(f.dataset.token), data); toast("Password saved"); go("who"); }
     else if (kind === "pin") {

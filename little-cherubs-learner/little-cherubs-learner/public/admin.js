@@ -20,7 +20,7 @@ async function api(method, path, body, raw) {
 function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2600); }
 const errBox = (e) => `<div class="err" role="alert">${esc(e.message || e)}</div>`;
 const copyField = (v, id) => `<div class="copy"><input id="${id}" value="${esc(v)}" readonly aria-label="Link"><button class="btn alt" data-act="copy" data-target="${id}">Copy</button></div>`;
-const passPill = (p) => !p.endsAt ? `<span class="pill">No pass</span>` : p.active ? `<span class="pill ${p.daysLeft <= 10 ? "cop" : "on"}">${p.daysLeft} days left</span>` : `<span class="pill" style="background:var(--bad-soft);color:var(--bad)">Ended ${fmtD(p.endsAt)}</span>`;
+const passPill = (p) => !p.endsAt ? `<span class="pill">No pass</span>` : p.active ? `<span class="pill ${p.trial || p.daysLeft <= 10 ? "cop" : "on"}">${p.trial ? "Free trial · " : ""}${p.daysLeft} days left</span>` : `<span class="pill" style="background:var(--bad-soft);color:var(--bad)">${p.trial ? "Trial ended" : "Ended"} ${fmtD(p.endsAt)}</span>`;
 
 let route = { name: "", arg: "" };
 const parse = () => { const [n, ...r] = location.hash.replace(/^#\/?/, "").split("/"); return { name: n || "overview", arg: decodeURIComponent(r.join("/")) }; };
@@ -53,7 +53,7 @@ async function Overview() {
   const check = (ok, label, help) => `<div class="log"><span class="dot ${ok ? "done" : ""}" style="width:24px;height:24px">${ok ? "✓" : "!"}</span><span class="grow"><b>${label}</b>${ok ? "" : `<br><span class="muted" style="font-size:.85rem">${help}</span>`}</span></div>`;
   return shell(`
     <h1>Overview</h1>
-    <div class="tiles6">${tile(c.families, "families set up")}${tile(c.activePasses, "active passes")}${tile(c.endingSoon, "ending in 10 days")}${tile(c.ended, "ended passes")}${tile(c.pendingSetup, "waiting to set up")}${tile(c.sales30, "sales in 30 days")}</div>
+    <div class="tiles6">${tile(c.families, "families set up")}${tile(c.activePasses, "active paid passes")}${tile(c.activeTrials, "on free trial")}${tile(c.trialsEnded, "trials ended, not bought")}${tile(c.trialsBought, "trial families who bought")}${tile(c.endingSoon, "ending in 10 days")}${tile(c.ended, "ended passes")}${tile(c.pendingSetup, "waiting to set up")}${tile(c.sales30, "sales in 30 days")}</div>
     <div class="grid2">
       <section class="card"><h3 style="margin-bottom:6px">Setup check</h3>
         ${check(true, "Admin password set", "")}
@@ -62,8 +62,8 @@ async function Overview() {
         ${check(!/selar\.com\/?$/.test(cfg.renewUrl), "Renewal link set", "Set RENEW_URL to your Selar product page so parents can renew.")}
         <p class="muted" style="font-size:.85rem;margin-top:8px">Selar webhook address for Zapier:<br><code>${esc(cfg.siteUrl)}/api/webhooks/selar</code></p>
       </section>
-      <section class="card"><h3 style="margin-bottom:6px">Passes ending in the next 10 days</h3>
-        ${d.endingSoon.length ? d.endingSoon.map((x) => `<div class="log"><time>${x.daysLeft} days</time><span class="grow"><button class="linkbtn" data-go="family/${esc(x.familyId)}">${esc(x.learner)}</button> · ${esc(x.parent || x.email)}</span></div>`).join("") : `<p class="muted">None.</p>`}
+      <section class="card"><h3 style="margin-bottom:6px">Passes and trials ending in the next 10 days</h3>
+        ${d.endingSoon.length ? d.endingSoon.map((x) => `<div class="log"><time>${x.daysLeft} days</time><span class="grow"><button class="linkbtn" data-go="family/${esc(x.familyId)}">${esc(x.learner)}</button>${x.trial ? " (free trial)" : ""} · ${esc(x.parent || x.email)}</span></div>`).join("") : `<p class="muted">None.</p>`}
       </section>
     </div>
     <section class="stack-s"><h3>Recent sales</h3>${salesTable(d.recentSales)}</section>`);

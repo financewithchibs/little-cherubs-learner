@@ -77,8 +77,14 @@ function parseHash() {
 function wordmark() {
   return `<div class="brand"><img src="/assets/emblem.png" alt="" width="40" height="40"><span class="wm"><small>LITTLE</small><b>Cherubs</b><i>Learner</i></span></div>`;
 }
+// Small round logo for headers that also show a page title. Tapping it goes home.
+function mark(to = "home") {
+  return `<button class="mark" data-go="${esc(to)}" aria-label="Little Cherubs home"><img src="/assets/emblem.png" alt="Little Cherubs" width="36" height="36"><span class="wm"><small>LITTLE</small><b>Cherubs</b></span></button>`;
+}
+// Header for signed-out screens: the full wordmark only.
+function brandHeader() { return `<header class="top"><div class="wrap">${wordmark()}</div></header>`; }
 function backHeader(title, code, to) {
-  return `<header class="top"><div class="wrap"><button class="back" data-go="${esc(to)}" aria-label="Back">${I.back}</button><div class="top-title">${code ? `<div class="code">${esc(code)}</div>` : ""}<b>${esc(title)}</b></div></div></header>`;
+  return `<header class="top"><div class="wrap"><button class="back" data-go="${esc(to)}" aria-label="Back">${I.back}</button><div class="top-title">${code ? `<div class="code">${esc(code)}</div>` : ""}<b>${esc(title)}</b></div>${mark()}</div></header>`;
 }
 const learnerObj = () => me?.family?.learners?.find((l) => l.id === me.session.learnerId);
 const initial = (n) => esc(String(n || "?").trim().charAt(0).toUpperCase());
@@ -101,7 +107,7 @@ function setTabs(kind) {
 /* Signed-out screens                                                     */
 /* ===================================================================== */
 function SignIn() {
-  return `<main class="wrap welcome">
+  return brandHeader() + `<main class="wrap welcome">
     <img class="logo" src="/assets/logo.png" alt="Little Cherubs logo">
     <div class="stack-s center"><h1>Little Cherubs Learner</h1><p class="muted">Lessons, videos and practice that follow the CDC syllabus, Forms 1 to 4.</p></div>
     <form class="card stack" data-form="signin">
@@ -118,7 +124,7 @@ function SignIn() {
 }
 
 function Forgot() {
-  return `<main class="wrap welcome">
+  return brandHeader() + `<main class="wrap welcome">
     <div class="stack-s center"><h1>Reset your password</h1><p class="muted">Enter the email you used to buy your pass. We'll send a link to choose a new password.</p></div>
     <form class="card stack" data-form="forgot">
       <div class="field"><label for="fem">Email address</label><input id="fem" name="email" type="email" required></div>
@@ -132,9 +138,9 @@ function Forgot() {
 let setupInfo = null;
 async function SetUp(token) {
   try { setupInfo = await api("GET", "/api/setup/" + encodeURIComponent(token)); }
-  catch (e) { return `<main class="wrap welcome"><div class="stack-s center"><h1>Set-up link</h1></div>${errBox(e)}<button class="btn" data-go="signin">Go to sign in</button></main>`; }
+  catch (e) { return brandHeader() + `<main class="wrap welcome"><div class="stack-s center"><h1>Set-up link</h1></div>${errBox(e)}<button class="btn" data-go="signin">Go to sign in</button></main>`; }
   const form = setupInfo.credits[0]?.form || 1;
-  return `<main class="wrap welcome">
+  return brandHeader() + `<main class="wrap welcome">
     <img class="logo" src="/assets/logo.png" alt="Little Cherubs logo" style="width:110px;height:110px">
     <div class="stack-s center"><h1>Welcome to Little Cherubs Learner</h1><p class="muted">Thank you for your payment. Set up your family account in one step.</p></div>
     ${setupInfo.credits.length ? `<div class="ok-note">Paid: <b>${esc(setupInfo.credits.map((c) => c.label).join(", "))}</b></div>` : ""}
@@ -156,7 +162,7 @@ async function SetUp(token) {
 }
 
 function Reset(token) {
-  return `<main class="wrap welcome">
+  return brandHeader() + `<main class="wrap welcome">
     <div class="stack-s center"><h1>Choose a new password</h1></div>
     <form class="card stack" data-form="reset" data-token="${esc(token)}">
       <div class="field"><label for="rpw">New password (8 or more characters)</label><input id="rpw" name="password" type="password" minlength="8" autocomplete="new-password" required></div>
@@ -173,7 +179,7 @@ function Reset(token) {
 let pinFor = false;
 function Who() {
   const f = me.family;
-  return `<main class="wrap welcome">
+  return brandHeader() + `<main class="wrap welcome">
     <div class="stack-s center"><span class="eyebrow">${esc(f.parentName)}'s family</span><h1>Who's using the app?</h1></div>
     <div class="tiles">
       ${f.learners.map((l) => `<button class="tile" data-act="as-learner" data-id="${esc(l.id)}"><span class="av kid">${initial(l.name)}</span><b>${esc(l.name)}</b><span class="pill">Form ${l.form}</span></button>`).join("")}
@@ -256,7 +262,7 @@ async function Learn() {
   const d = await loadHome();
   if (!d.pass.active) return go("ended");
   const total = d.course.reduce((s, c) => s + c.competences.length, 0);
-  return `<header class="top"><div class="wrap"><div class="top-title"><div class="code">Form ${d.learner.form} · ${d.course.length} concepts · ${total} competences</div><b>${esc(d.subject)} course map</b></div></div></header>
+  return `<header class="top"><div class="wrap">${mark()}<div class="top-title"><div class="code">Form ${d.learner.form} · ${d.course.length} concepts · ${total} competences</div><b>${esc(d.subject)} course map</b></div></div></header>
   <main class="wrap stack">${d.course.map((c) => `<section class="concept">
     <div class="concept-h"><span class="num">${c.no}</span><h3>${esc(c.name)}</h3></div>
     <div class="list">${c.competences.map((x) => x.available
@@ -435,7 +441,7 @@ async function Results(code) {
 function Data() {
   const saver = pref.get("dataSaver", true);
   const q = pref.get("quality", saver ? "240" : "360");
-  return `<header class="top"><div class="wrap"><div class="top-title"><div class="code">Online only · streams, never stored</div><b>Data and settings</b></div><button class="av kid sm" data-act="switch" aria-label="Switch profile">${initial(learnerObj()?.name)}</button></div></header>
+  return `<header class="top"><div class="wrap">${mark()}<div class="top-title"><div class="code">Online only · streams, never stored</div><b>Data and settings</b></div><button class="av kid sm" data-act="switch" aria-label="Switch profile">${initial(learnerObj()?.name)}</button></div></header>
   <main class="wrap stack">
     <div class="card row"><div class="grow"><b>Data saver</b><p class="muted" style="font-size:.88rem">Start videos at 240p. You can still choose another quality on any video.</p></div><button class="sw" data-act="saver" aria-pressed="${saver}" aria-label="Data saver"></button></div>
     <section class="card stack-s"><h3>Default video quality</h3>
@@ -467,7 +473,7 @@ let parentData = null;
 async function loadParent() { parentData = await api("GET", "/api/parent/overview"); me.family = parentData.family; return parentData; }
 
 function parentHeader(sub) {
-  return `<header class="top"><div class="wrap"><div class="brand"><span class="av sm">${initial(me.family.parentName)}</span><span class="top-title"><div class="code">Parent</div><b>${esc(sub)}</b></span></div><button class="btn alt" style="min-height:38px;padding:6px 12px;font-size:.85rem" data-act="switch">Switch</button></div></header>`;
+  return `<header class="top"><div class="wrap">${mark("parent")}<div class="brand"><span class="av sm">${initial(me.family.parentName)}</span><span class="top-title"><div class="code">Parent</div><b>${esc(sub)}</b></span></div><button class="btn alt" style="min-height:38px;padding:6px 12px;font-size:.85rem" data-act="switch">Switch</button></div></header>`;
 }
 
 function passCard(l, renewUrl) {
@@ -601,7 +607,7 @@ function handleError(e) {
     return;
   }
   setTabs(null);
-  $("#app").innerHTML = `<main class="wrap stack" style="padding-top:40px">${errBox(e)}<button class="btn alt" onclick="location.reload()">Try again</button></main>`;
+  $("#app").innerHTML = brandHeader() + `<main class="wrap stack" style="padding-top:40px">${errBox(e)}<button class="btn alt" onclick="location.reload()">Try again</button></main>`;
 }
 
 /* ---------- actions ---------- */

@@ -308,3 +308,16 @@ button,a.btn{transition:background-color .15s,color .15s,border-color .15s}
   .mark:hover img{border-color:var(--gold-bright)}
 }
 
+/* feedback rating */
+.rate{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.rate legend{padding:0;margin-bottom:10px}
+.rate-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.rate label{display:block;cursor:pointer}
+.rate input{position:absolute;opacity:0;pointer-events:none}
+.rate span{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px;border:1px solid var(--line);border-radius:12px;background:var(--surface);font-size:.78rem;color:var(--muted);text-align:center;min-height:62px;justify-content:center}
+.rate span b{font-size:1.25rem;color:var(--ink)}
+.rate input:checked+span{background:var(--brand);border-color:var(--brand);color:var(--brand-ink)}
+.rate input:checked+span b{color:var(--brand-ink)}
+.rate input:focus-visible+span{outline:3px solid var(--gold-bright);outline-offset:2px}
+@media (hover:hover){.rate label:hover span{border-color:var(--gold-bright);background:var(--gold-hover);color:var(--on-gold)}.rate label:hover input:checked+span{background:var(--brand);color:var(--brand-ink)}}
+

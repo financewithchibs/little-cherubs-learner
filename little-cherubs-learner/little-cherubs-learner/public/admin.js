@@ -27,7 +27,7 @@ const parse = () => { const [n, ...r] = location.hash.replace(/^#\/?/, "").split
 const go = (h) => { if (location.hash === "#" + h) render(); else location.hash = h; };
 
 function shell(inner) {
-  const tabs = [["overview", "Overview"], ["families", "Families"], ["sale", "Record a sale"], ["sales", "Sales log"], ["content", "Content and video"]];
+  const tabs = [["overview", "Overview"], ["families", "Families"], ["sale", "Record a sale"], ["sales", "Sales log"], ["feedback", "Feedback"], ["content", "Content and video"]];
   const cur = route.name === "family" ? "families" : route.name === "topic" ? "content" : route.name;
   return `<header class="top"><div class="wrap"><div class="brand"><img src="/assets/emblem.png" alt="" width="40" height="40"><span class="wm"><small>LITTLE</small><b>Cherubs</b><i>Admin</i></span></div>
     <a class="btn alt" style="min-height:38px;padding:6px 12px;font-size:.85rem" href="/" target="_blank" rel="noopener">Open app</a>
@@ -53,7 +53,7 @@ async function Overview() {
   const check = (ok, label, help) => `<div class="log"><span class="dot ${ok ? "done" : ""}" style="width:24px;height:24px">${ok ? "✓" : "!"}</span><span class="grow"><b>${label}</b>${ok ? "" : `<br><span class="muted" style="font-size:.85rem">${help}</span>`}</span></div>`;
   return shell(`
     <h1>Overview</h1>
-    <div class="tiles6">${tile(c.families, "families set up")}${tile(c.activePasses, "active paid passes")}${tile(c.activeTrials, "on free trial")}${tile(c.trialsEnded, "trials ended, not bought")}${tile(c.trialsBought, "trial families who bought")}${tile(c.endingSoon, "ending in 10 days")}${tile(c.ended, "ended passes")}${tile(c.pendingSetup, "waiting to set up")}${tile(c.sales30, "sales in 30 days")}</div>
+    <div class="tiles6">${tile(c.families, "families set up")}${tile(c.activePasses, "active paid passes")}${tile(c.activeTrials, "on free trial")}${tile(c.trialsEnded, "trials ended, not bought")}${tile(c.trialsBought, "trial families who bought")}${tile(c.endingSoon, "ending in 10 days")}${tile(c.ended, "ended passes")}${tile(c.pendingSetup, "waiting to set up")}${tile(c.feedback, "feedback messages")}${tile(c.sales30, "sales in 30 days")}</div>
     <div class="grid2">
       <section class="card"><h3 style="margin-bottom:6px">Setup check</h3>
         ${check(true, "Admin password set", "")}
@@ -136,6 +136,19 @@ async function Sales() {
   return shell(`<h1>Sales log</h1><p class="muted">Every sale received from Selar or recorded here, including any that were rejected and why.</p>${salesTable(d.sales)}`);
 }
 
+async function FeedbackList() {
+  const d = await api("GET", "/api/admin/feedback");
+  const stars = (n) => n ? `<span class="pill ${n >= 4 ? "on" : n <= 2 ? "" : "cop"}" ${n <= 2 ? 'style="background:var(--bad-soft);color:var(--bad)"' : ""}>${n} / 5</span>` : `<span class="pill">No rating</span>`;
+  return shell(`<h1>Feedback</h1>
+    <p class="muted">Messages sent from the app's "Send feedback" screen by parents and learners.</p>
+    <div class="tiles6">${`<div class="stat"><b>${d.count}</b><span>messages</span></div>`}${`<div class="stat"><b>${d.average ?? "–"}</b><span>average rating (out of 5)</span></div>`}</div>
+    ${d.feedback.length ? d.feedback.map((x) => `<section class="card stack-s">
+      <div class="row" style="flex-wrap:wrap;gap:8px">${stars(x.rating)}<b class="grow">${esc(x.from === "learner" ? `${x.learnerName} (learner, Form ${x.form})` : `${x.parentName || x.email} (parent)`)}</b>${x.trial ? `<span class="pill cop">Free trial</span>` : ""}<span class="muted" style="font-size:.85rem">${fmtDT(x.at)}</span></div>
+      ${x.text ? `<p>${esc(x.text)}</p>` : ""}
+      <p class="muted" style="font-size:.82rem">From page: ${esc(x.page || "–")} · <button class="linkbtn" data-go="family/${esc(x.familyId)}">${esc(x.email)}</button></p>
+    </section>`).join("") : `<p class="muted">No feedback yet.</p>`}`);
+}
+
 let contentForm = "1", uploadReport = null;
 async function Content() {
   const d = await api("GET", "/api/admin/content");
@@ -187,7 +200,7 @@ async function Topic(code) {
 }
 
 /* ---------- router ---------- */
-const VIEWS = { overview: Overview, families: Families, family: Family, sale: Sale, sales: Sales, content: Content, topic: Topic };
+const VIEWS = { overview: Overview, families: Families, family: Family, sale: Sale, sales: Sales, feedback: FeedbackList, content: Content, topic: Topic };
 let signedIn = null;
 async function render() {
   route = parse();

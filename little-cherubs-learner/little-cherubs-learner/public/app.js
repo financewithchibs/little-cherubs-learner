@@ -234,6 +234,30 @@ function learnerHeader() {
   return `<header class="top"><div class="wrap">${wordmark()}<span class="pill ${saver ? "on" : ""}">Data saver ${saver ? "on" : "off"}</span><button class="av kid sm" data-act="switch" aria-label="Switch profile">${initial(l?.name)}</button></div></header>`;
 }
 
+// "Send feedback" link shown at the foot of key screens; it remembers the page it came from.
+function feedbackButton() {
+  const from = encodeURIComponent(`${route.name}/${route.arg || ""}`.replace(/\/$/, ""));
+  return `<section class="box stack-s"><b>Tell us what you think</b><p style="font-size:.92rem">Little Cherubs Learner is new. Your ideas help us make it better.</p><button class="btn alt" data-go="feedback/${from}">Send feedback ${I.chev}</button></section>`;
+}
+let feedbackSent = false;
+function Feedback(from) {
+  const back = from || (me.session.role === "parent" ? "parent" : "home");
+  const sent = feedbackSent; feedbackSent = false;
+  return backHeader("Send feedback", "", back) + `<main class="wrap stack">
+    ${sent ? `<div class="box green stack-s"><h2>Thank you!</h2><p>We read every message. Your feedback helps us improve Little Cherubs Learner for every family.</p><button class="btn" data-go="${esc(back)}">Back ${I.chev}</button></div>`
+    : `<form class="card stack" data-form="feedback" data-from="${esc(back)}">
+      <fieldset class="rate"><legend><b>How would you rate Little Cherubs Learner so far?</b></legend>
+        <div class="rate-row">${[[1, "Poor"], [2, "Fair"], [3, "Good"], [4, "Very good"], [5, "Excellent"]].map(([n, l]) => `<label><input type="radio" name="rating" value="${n}"><span><b>${n}</b>${l}</span></label>`).join("")}</div>
+      </fieldset>
+      <div class="field"><label for="fbt">What did you like, and what should we improve?</label>
+        <textarea id="fbt" name="text" rows="5" maxlength="1000" placeholder="For example: the lessons were clear, but the video was slow to start on my phone."></textarea></div>
+      <div id="formerr"></div>
+      <button class="btn block" type="submit">Send feedback</button>
+      <p class="muted" style="font-size:.85rem">We see your name and the page you came from, so we can follow up if needed.</p>
+    </form>`}
+  </main>`;
+}
+
 // The main "next step" card on Home. A competence with all 4 parts done but not
 // yet mastered asks for a practice retake instead of a vague "Continue".
 function heroCard(d, n) {
@@ -285,6 +309,7 @@ async function Home() {
       <div class="stat"><b style="font-variant-numeric:tabular-nums">${days}</b><span>days left on pass</span></div>
     </div>
     ${soon.length ? `<section class="stack-s"><h3>Coming soon</h3><div class="list">${soon.map((x) => `<div class="item locked"><span class="dot">${I.lock}</span><span class="grow"><span class="code">BIO-F${d.learner.form}-${esc(x.code)} · ${esc(x.topic || "")}</span><span class="t">${esc(x.title)}</span></span><span class="pill">Soon</span></div>`).join("")}</div></section>` : ""}
+    ${feedbackButton()}
   </main>`;
 }
 
@@ -465,6 +490,7 @@ async function Results(code) {
     ${p < 1 && tip ? `<div class="box cop stack-s"><h3>What to do next</h3><p>${tip[0]}</p><button class="btn alt" data-go="${tip[1]}/${esc(code)}">${tip[2]} ${I.chev}</button></div>` : `<div class="box green"><b>Full marks.</b> Move on to the next topic.</div>`}
     <div class="navq"><button class="btn alt" data-act="retry" data-code="${esc(code)}">Try again</button><button class="btn" data-go="topic/${esc(code)}">Back to topic</button></div>
     <p class="muted" style="font-size:.85rem">Best score so far: ${score(lastResult.best, a.max)}. Your parent sees this in their progress report.</p>
+    ${feedbackButton()}
   </main>`;
 }
 
@@ -476,9 +502,10 @@ function Data() {
     <div class="card row"><div class="grow"><b>Data saver</b><p class="muted" style="font-size:.88rem">Start videos at 240p. You can still choose another quality on any video.</p></div><button class="sw" data-act="saver" aria-pressed="${saver}" aria-label="Data saver"></button></div>
     <section class="card stack-s"><h3>Default video quality</h3>
       <div class="toggle" role="group" aria-label="Default video quality">${Object.entries(QUAL).map(([k, [l]]) => `<button data-act="quality" data-q="${k}" aria-pressed="${q === k}">${l}</button>`).join("")}</div>
-      <p class="muted" style="font-size:.85rem">A 4–5 minute lesson video uses about 2–4 MB at data saver quality, 4–8 MB at phone quality and under 2 MB as audio only.</p>
+      <p class="muted" style="font-size:.85rem">A 3–4 minute lesson video uses about 6–7 MB at data saver quality, 12–14 MB at phone quality and about 2 MB as audio only.</p>
     </section>
     <div class="box stack-s"><b>Why you need a connection</b><p style="font-size:.92rem">Little Cherubs Learner is online only, so lessons and videos stream each time and nothing is saved on the phone. Your progress saves as you go.</p></div>
+    ${feedbackButton()}
     <button class="btn alt block" data-act="switch">Switch profile</button>
   </main>`;
 }
@@ -561,6 +588,7 @@ async function ParentHome() {
       <div class="field"><label for="cf">Form</label><select id="cf" name="form">${[1, 2, 3, 4].map((x) => `<option value="${x}">Form ${x}</option>`).join("")}</select></div>
       <div id="formerr"></div><button class="btn alt" type="submit">Add child</button>
       <p class="muted" style="font-size:.85rem">Each child needs their own pass. Buy it on Selar with the same email address.</p></form>
+    ${feedbackButton()}
   </main>`;
 }
 
@@ -611,8 +639,8 @@ async function Pass() {
 /* Router                                                                 */
 /* ===================================================================== */
 const SIGNED_OUT = { signin: SignIn, trial: Trial, forgot: Forgot, setup: SetUp, reset: Reset };
-const LEARNER = { home: Home, learn: Learn, topic: Topic, lesson: Lesson, video: Video, practical: Practical, practice: Practice, results: Results, data: Data, ended: Ended };
-const PARENT = { parent: ParentHome, report: Report, pass: Pass };
+const LEARNER = { feedback: Feedback, home: Home, learn: Learn, topic: Topic, lesson: Lesson, video: Video, practical: Practical, practice: Practice, results: Results, data: Data, ended: Ended };
+const PARENT = { feedback: Feedback, parent: ParentHome, report: Report, pass: Pass };
 
 async function render() {
   route = parseHash();
@@ -784,6 +812,10 @@ document.addEventListener("submit", async (e) => {
       me = await api("POST", "/api/session/parent", { pin }); pinFor = false; go("parent");
     }
     else if (kind === "addchild") { me.family = (await api("POST", "/api/parent/learners", data)).family; toast("Child added"); render(); }
+    else if (kind === "feedback") {
+      await api("POST", "/api/feedback", { rating: data.rating, text: data.text, page: f.dataset.from });
+      feedbackSent = true; render(); window.scrollTo(0, 0);
+    }
     else if (kind === "newpin") { await api("POST", "/api/parent/pin", data); toast("PIN changed"); f.reset(); }
   } catch (err) {
     if (err instanceof ApiError && errEl && !["SIGNED_OUT"].includes(err.code)) {

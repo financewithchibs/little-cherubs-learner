@@ -1,12 +1,13 @@
 // Runs once a day. Sends renewal reminders 10 days and 2 days before a pass
-// ends, and once on the day it ends. Messages go to NOTIFY_WEBHOOK_URL
+// ends, and once on the day it ends. Free trials get the 2-day and the
+// "ended" messages only, inviting the parent to buy the 90-Day Access. Messages go to NOTIFY_WEBHOOK_URL
 // (a Zapier "Catch Hook"), which sends the email and WhatsApp message.
 
 import { families, logs } from "../../lib/store.mjs";
 import { passStatus, saveFamily } from "../../lib/core.mjs";
-import { DEFAULT_RENEW_URL } from "../../config/products.mjs";
+import { DEFAULT_RENEW_URL, TRIAL } from "../../config/products.mjs";
 
-const STAGES = [ { key: "d10", when: (p) => p.active && p.daysLeft <= 10 && p.daysLeft > 2 },
+const STAGES = [ { key: "d10", when: (p) => !p.trial && p.active && p.daysLeft <= 10 && p.daysLeft > 2 },
                  { key: "d2", when: (p) => p.active && p.daysLeft <= 2 },
                  { key: "ended", when: (p) => !p.active && p.endsAt && Date.now() - p.endsAt < 3 * 86400000 } ];
 
@@ -23,7 +24,15 @@ export async function runReminders({ send = defaultSend } = {}) {
       l.reminders = l.reminders || {};
       const stage = STAGES.find((s) => s.when(p));
       if (!stage || l.reminders[stage.key]) continue;
-      const payload = {
+      const url = process.env.RENEW_URL || DEFAULT_RENEW_URL;
+      const payload = p.trial ? {
+        type: stage.key === "ended" ? "trial_ended" : "trial_ending",
+        email: f.email, phone: f.phone, parentName: f.parentName, learnerName: l.name, form: l.form,
+        daysLeft: p.daysLeft, endsAt: new Date(p.endsAt).toISOString().slice(0, 10), renewUrl: url,
+        message: stage.key === "ended"
+          ? `Hello ${f.parentName}. ${l.name}'s ${TRIAL.days}-day free trial of Little Cherubs Learner has ended. ${l.name}'s progress is saved. Buy the 90-Day Access to continue: ${url}`
+          : `Hello ${f.parentName}. ${l.name}'s free trial of Little Cherubs Learner ends in ${p.daysLeft} day${p.daysLeft === 1 ? "" : "s"}. Buy the 90-Day Access to keep learning without a break: ${url}`,
+      } : {
         type: stage.key === "ended" ? "pass_ended" : "pass_ending",
         email: f.email, phone: f.phone, parentName: f.parentName, learnerName: l.name, form: l.form,
         daysLeft: p.daysLeft, endsAt: new Date(p.endsAt).toISOString().slice(0, 10),

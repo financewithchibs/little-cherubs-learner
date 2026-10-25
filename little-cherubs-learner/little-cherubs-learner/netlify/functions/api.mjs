@@ -7,10 +7,11 @@ import * as core from "../../lib/core.mjs";
 import { parseContentDoc, learnerView, findCompetence } from "../../lib/content.mjs";
 import * as med from "../../lib/media.mjs";
 import curriculum from "../../config/curriculum-biology.mjs";
-import products, { DEFAULT_RENEW_URL } from "../../config/products.mjs";
+import products, { DEFAULT_RENEW_URL, TRIAL } from "../../config/products.mjs";
 
 const SID = "lcl_sid", ADMIN = "lcl_admin";
 const renewUrl = () => process.env.RENEW_URL || DEFAULT_RENEW_URL;
+const trialInfo = () => ({ days: TRIAL.days, forms: TRIAL.forms });
 
 /* ---------------- helpers ---------------- */
 async function sessionFrom(req) { return core.getSession(parseCookies(req)[SID]); }
@@ -69,7 +70,7 @@ async function contentCodes() { return new Set(await contentStore().list("")); }
 
 function meView(s, family) {
   return { signedIn: true, family: core.familyView(family), session: { role: s.role, learnerId: s.learnerId, pinOk: !!s.pinOk }, renewUrl: renewUrl(),
-    maxDevices: core.MAX_DEVICES };
+    maxDevices: core.MAX_DEVICES, trial: trialInfo() };
 }
 
 function courseFor(form, codes, prog) {
@@ -93,7 +94,7 @@ const on = (method, pattern, fn) => routes.push({ method, re: new RegExp("^" + p
 on("GET", "/api/me", async (req) => {
   const s = await sessionFrom(req);
   const family = s && (await core.getFamily(s.familyId));
-  if (!s || !family) return { signedIn: false, renewUrl: renewUrl() };
+  if (!s || !family) return { signedIn: false, renewUrl: renewUrl(), trial: trialInfo() };
   return meView(s, family);
 });
 
@@ -144,6 +145,36 @@ on("POST", "/api/setup/:token", async (req, p) => {
   core.autoApply(family);
   await core.saveFamily(family);
   await indexes().del("setup:" + p.token);
+  const s = await core.createSession(family.id);
+  return json(meView(s, family), 200, { "set-cookie": cookie(SID, s.sid) });
+});
+
+/* --- free trial: a new family signs up without paying --- */
+on("POST", "/api/trial/start", async (req) => {
+  const ip = req.headers.get("x-nf-client-connection-ip") || (req.headers.get("x-forwarded-for") || "").split(",")[0].trim() || "local";
+  const rl = await rateLimit("trial:" + ip, 5, 60);
+  const b = await readJSON(req);
+  const email = normEmail(b.email), parentName = cleanText(b.parentName, 60), learnerName = cleanText(b.learnerName, 40);
+  const phone = cleanText(b.phone, 30), pk = core.phoneKey(phone), form = Number(b.form) || TRIAL.forms[0];
+  if (!parentName) fail(400, "NAME", "Enter your name.");
+  if (!isEmail(email)) fail(400, "EMAIL", "Enter a valid email address.");
+  if (!pk) fail(400, "PHONE", "Enter your WhatsApp number, for example 0977 123 456.");
+  if (String(b.password || "").length < 8) fail(400, "PASSWORD", "Choose a password of at least 8 characters.");
+  if (!/^\d{4}$/.test(String(b.pin || ""))) fail(400, "PIN", "The parent PIN must be 4 digits.");
+  if (!learnerName) fail(400, "LEARNER", "Enter your child's first name.");
+  if (!TRIAL.forms.includes(form)) fail(400, "FORM", `The free trial is open for Form ${TRIAL.forms.join(", ")} at the moment.`);
+  if (await core.familyByEmail(email)) fail(409, "ACCOUNT_EXISTS", "This email already has an account. Sign in instead, or reset your password.");
+  if (await indexes().getJSON("trialphone:" + pk)) fail(409, "TRIAL_USED", "A free trial has already been used with this WhatsApp number. Buy the 90-Day Access to continue.");
+  await rl.bad(); // counts every trial started from this connection
+  const learner = core.startTrial(core.newLearner(learnerName, form));
+  const family = { id: newId(10), email, parentName, phone, status: "active", passwordHash: hashSecret(b.password), pinHash: hashSecret(b.pin),
+    learners: [learner], credits: [], payments: [], createdAt: Date.now(), trial: { startedAt: Date.now(), phoneKey: pk } };
+  await indexes().setJSON("email:" + email, { familyId: family.id });
+  await indexes().setJSON("trialphone:" + pk, { familyId: family.id, at: Date.now() });
+  await core.saveFamily(family);
+  await logs().setJSON(`trial/${String(Date.now()).padStart(15, "0")}-${family.id}`, { at: Date.now(), familyId: family.id, email, parentName, learner: learnerName, form });
+  await notify({ type: "trial_started", email, phone, parentName, learnerName, form, days: TRIAL.days,
+    endsAt: new Date(learner.passes[TRIAL.subjects[0]].endsAt).toISOString().slice(0, 10), buyUrl: renewUrl() });
   const s = await core.createSession(family.id);
   return json(meView(s, family), 200, { "set-cookie": cookie(SID, s.sid) });
 });
@@ -452,13 +483,16 @@ on("GET", "/api/admin/overview", async (req) => {
     counts: {
       families: fams.filter((f) => f.status === "active").length,
       pendingSetup: fams.filter((f) => f.status !== "active").length,
-      activePasses: learners.filter((x) => x.pass.active).length,
+      activePasses: learners.filter((x) => x.pass.active && !x.pass.trial).length,
+      activeTrials: learners.filter((x) => x.pass.active && x.pass.trial).length,
+      trialsEnded: learners.filter((x) => !x.pass.active && x.pass.trial && x.pass.endsAt).length,
+      trialsBought: fams.filter((f) => f.trial && f.payments.length).length,
       endingSoon: learners.filter((x) => x.pass.active && x.pass.daysLeft <= 10).length,
       ended: learners.filter((x) => !x.pass.active && x.pass.endsAt).length,
       sales30: sales.filter((s) => s.at > month && s.result && !s.result.startsWith("rejected") && !s.result.startsWith("duplicate")).length,
     },
     endingSoon: learners.filter((x) => x.pass.active && x.pass.daysLeft <= 10)
-      .map((x) => ({ familyId: x.f.id, email: x.f.email, parent: x.f.parentName, learner: x.l.name, daysLeft: x.pass.daysLeft, endsAt: x.pass.endsAt })),
+      .map((x) => ({ familyId: x.f.id, email: x.f.email, parent: x.f.parentName, learner: x.l.name, daysLeft: x.pass.daysLeft, endsAt: x.pass.endsAt, trial: x.pass.trial })),
     recentSales: sales.slice(0, 10),
     config: {
       adminPassword: true,

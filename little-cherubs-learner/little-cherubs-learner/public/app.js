@@ -197,6 +197,35 @@ function learnerHeader() {
   return `<header class="top"><div class="wrap">${wordmark()}<span class="pill ${saver ? "on" : ""}">Data saver ${saver ? "on" : "off"}</span><button class="av kid sm" data-act="switch" aria-label="Switch profile">${initial(l?.name)}</button></div></header>`;
 }
 
+// The main "next step" card on Home. A competence with all 4 parts done but not
+// yet mastered asks for a practice retake instead of a vague "Continue".
+function heroCard(d, n) {
+  const retake = n.parts >= 4 && !n.mastered;
+  const label = n.mastered ? "Review" : retake ? "Retake practice" : n.parts ? "Continue learning" : "Start learning";
+  const target = retake ? `practice/${n.code}` : `topic/${n.code}`;
+  const pill = n.mastered ? "Mastered" : retake ? "4/4 done · not yet mastered" : `${n.parts}/4 done`;
+  return `<section class="hero">
+      <div class="row"><span class="code">BIO-F${d.learner.form}-${esc(n.code)}</span><span class="grow"></span><span class="pill" style="background:rgba(255,255,255,.16);color:inherit">${pill}</span></div>
+      <span class="eyebrow" style="color:inherit;opacity:.85">Topic: ${esc(n.topic || "")}</span>
+      <h2>${esc(n.title)}</h2>
+      <div class="bar" aria-label="${n.parts} of 4 parts done"><i style="width:${n.parts * 25}%"></i></div>
+      ${retake ? `<p style="margin:0;font-size:.92rem;opacity:.9">You have done every part. Score 70% or more in practice to master this.${n.best != null && n.total ? ` Your best so far: ${n.best} of ${n.total}.` : ""}</p>` : ""}
+      <button class="btn light" data-go="${esc(target)}">${label} ${I.chev}</button>
+      ${retake ? `<button class="btn link" data-go="topic/${esc(n.code)}" style="color:inherit">Go over the topic first</button>` : ""}
+    </section>`;
+}
+
+// Other started competences, the next new one, and a way to pick any competence.
+function moreToLearn(d) {
+  const f = d.learner.form;
+  const row = (x, tag) => `<button class="item" data-go="topic/${esc(x.code)}"><span class="dot ${x.parts ? "on" : ""}">${x.parts}/4</span><span class="grow"><span class="code">BIO-F${f}-${esc(x.code)} · ${esc(x.topic || "")}</span><span class="t">${esc(x.title)}</span></span>${tag ? `<span class="pill">${tag}</span>` : ""}${I.chev}</button>`;
+  const rows = (d.inProgress || []).map((x) => row(x, x.parts >= 4 ? "Retake" : "")).concat(d.nextNew ? [row(d.nextNew, "New")] : []);
+  return `<section class="stack-s">
+      ${rows.length ? `<h3>${(d.inProgress || []).length ? "Pick up where you left off" : "Up next"}</h3><div class="list">${rows.join("")}</div>` : ""}
+      <button class="btn alt block" data-go="learn">Choose another competence ${I.chev}</button>
+    </section>`;
+}
+
 async function Home() {
   const d = await loadHome();
   if (!d.pass.active) return go("ended");
@@ -210,13 +239,8 @@ async function Home() {
   return learnerHeader() + `<main class="wrap stack">
     <div class="stack-s"><span class="eyebrow">${fmtD(Date.now())} · Form ${d.learner.form} ${esc(d.subject)}</span><h1>Good ${hr < 12 ? "morning" : hr < 17 ? "afternoon" : "evening"}, ${esc(d.learner.name)}</h1></div>
     ${days <= 10 ? `<div class="warn"><b>Your pass ends in ${plural(days, "day")} (${fmtD(d.pass.endsAt)}).</b><p style="font-size:.92rem">Ask your parent to renew so your learning carries on without a break. Your progress is always saved.</p></div>` : ""}
-    ${n ? `<section class="hero">
-      <div class="row"><span class="code">BIO-F${d.learner.form}-${esc(n.code)}</span><span class="grow"></span><span class="pill" style="background:rgba(255,255,255,.16);color:inherit">${n.parts}/4 done</span></div>
-      <span class="eyebrow" style="color:inherit;opacity:.85">Topic: ${esc(n.topic || "")}</span>
-      <h2>${esc(n.title)}</h2>
-      <div class="bar" aria-label="${n.parts} of 4 parts done"><i style="width:${n.parts * 25}%"></i></div>
-      <button class="btn light" data-go="topic/${esc(n.code)}">${n.parts ? "Continue" : "Start"} learning ${I.chev}</button>
-    </section>` : `<div class="box">Your first topic opens soon. Check back shortly.</div>`}
+    ${n ? heroCard(d, n) : `<div class="box">Your first topic opens soon. Check back shortly.</div>`}
+    ${n ? moreToLearn(d) : ""}
     <div class="stats">
       <div class="stat"><b>${mastered}<span style="font-size:.9rem;color:var(--muted)">/${all.length}</span></b><span>competences mastered</span></div>
       <div class="stat"><b>${open}</b><span>competences open now</span></div>

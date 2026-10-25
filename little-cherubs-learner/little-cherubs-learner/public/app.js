@@ -18,6 +18,8 @@ const I = {
   learn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2z"/><path d="M4 21a2 2 0 0 1 2-2h13"/></svg>',
   signal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20v-3M9 20v-7M14 20V9M19 20V4"/></svg>',
   chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+  chat: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/><path d="M8.5 11h7M8.5 14.5h4"/></svg>',
+  swap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20a6 6 0 0 1 10.5-4"/><path d="M16 14h6m-2-2 2 2-2 2M22 20h-6m2-2-2 2 2 2"/></svg>',
   card: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20M6 15h4"/></svg>',
   back: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>',
   book: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5h7a3 3 0 0 1 3 3v12a2 2 0 0 0-2-2H2zM22 5h-7a3 3 0 0 0-3 3v12a2 2 0 0 1 2-2h8z"/></svg>',
@@ -100,7 +102,11 @@ function setTabs(kind) {
   };
   const map = { topic: "learn", lesson: "learn", video: "learn", practical: "learn", practice: "learn", results: "learn" };
   const cur = map[route.name] || route.name;
-  $("#tabs").innerHTML = sets[kind].map(([k, l, ic]) => `<button class="tab" data-go="${k}" ${cur === k ? 'aria-current="page"' : ""}>${ic}${l}</button>`).join("");
+  // Feedback remembers the page it was opened from; Switch goes back to "Who's using the app?".
+  const from = route.name === "feedback" ? route.arg : `${route.name}/${route.arg || ""}`.replace(/\/$/, "");
+  $("#tabs").innerHTML = sets[kind].map(([k, l, ic]) => `<button class="tab" data-go="${k}" ${cur === k ? 'aria-current="page"' : ""}>${ic}${l}</button>`).join("")
+    + `<button class="tab" data-go="feedback/${encodeURIComponent(from)}" ${cur === "feedback" ? 'aria-current="page"' : ""}>${I.chat}Feedback</button>`
+    + `<button class="tab" data-act="switch">${I.swap}${kind === "parent" ? "Switch" : "Switch profile"}</button>`;
 }
 
 /* ===================================================================== */

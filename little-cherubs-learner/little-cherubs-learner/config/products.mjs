@@ -24,4 +24,9 @@ export default [
 
 // The page parents are sent to when they renew. Put your Selar product link here
 // (or set the RENEW_URL environment variable in Netlify, which takes priority).
-export const DEFAULT_RENEW_URL = "https://selar.com/";
+export const DEFAULT_RENEW_URL = "https://selar.com/2qt73y8435";
+
+// Free trial for new families: full access for TRIAL.days, once per email and
+// once per WhatsApp number. Offered only for the Forms listed (those with a pass
+// on sale), so a trial family can always buy the 90-Day Access afterwards.
+export const TRIAL = { days: 7, subjects: ["biology"], forms: [1] };

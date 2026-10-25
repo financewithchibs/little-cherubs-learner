@@ -2,7 +2,7 @@
 
 import { families, indexes, sessions, logs, progress } from "./store.mjs";
 import { DAY, newId, hashSecret, normEmail, cleanText, fail } from "./util.mjs";
-import products from "../config/products.mjs";
+import products, { TRIAL } from "../config/products.mjs";
 
 export const MAX_DEVICES = 2;
 export const SESSION_IDLE_DAYS = 30;
@@ -25,7 +25,22 @@ export function passStatus(learner, subject = "biology", t = now()) {
   const p = learner?.passes?.[subject];
   if (!p?.endsAt) return { active: false, endsAt: null, daysLeft: 0, startedAt: null };
   const ms = p.endsAt - t;
-  return { active: ms > 0, endsAt: p.endsAt, startedAt: p.startedAt, daysLeft: ms > 0 ? Math.ceil(ms / DAY) : 0 };
+  return { active: ms > 0, endsAt: p.endsAt, startedAt: p.startedAt, daysLeft: ms > 0 ? Math.ceil(ms / DAY) : 0, trial: !!p.trial };
+}
+
+/* ---------------- free trial ---------------- */
+// Phone numbers are compared on their last 9 digits, so 0977…, 260977… and +260 977… match.
+export function phoneKey(phone) {
+  const d = String(phone || "").replace(/\D/g, "");
+  return d.length >= 9 ? d.slice(-9) : "";
+}
+export function startTrial(learner, t = now()) {
+  for (const subject of TRIAL.subjects) {
+    learner.passes[subject] = { startedAt: t, endsAt: t + TRIAL.days * DAY, trial: true,
+      history: [{ at: t, days: TRIAL.days, note: "Free trial" }] };
+  }
+  learner.reminders = {};
+  return learner;
 }
 
 export function newLearner(name, form) {
@@ -62,6 +77,7 @@ export function applyCredit(family, creditId, learnerId, t = now()) {
     const base = Math.max(t, p.endsAt || 0);
     p.startedAt = p.startedAt && p.endsAt > t ? p.startedAt : t;
     p.endsAt = base + credit.days * DAY;
+    p.trial = false; // a paid pass replaces the trial (any trial days left are kept)
     p.history.push({ at: t, days: credit.days, creditId: credit.id, ref: credit.ref || null });
   }
   learner.reminders = {}; // new end date, so reminders can be sent again

@@ -200,6 +200,40 @@ try {
   assert.equal(cl.data.forms["1"].filter((x) => x.content).length, 1);
   step("admin overview, search, manual sale, password reset link and content list work");
 
+  // Free trial: sign up without paying, 7 days of full access, once per email and phone.
+  const tri = client();
+  const tf = { parentName: "Mrs Zulu", email: "Zulu@Example.com", phone: "+260 966 111 222", password: "trialpass1", pin: "1357", learnerName: "Natasha", form: 1 };
+  assert.equal((await tri("POST", "/api/trial/start", { ...tf, form: 3 })).status, 400, "Form 3 has no trial");
+  const ts = await tri("POST", "/api/trial/start", tf);
+  assert.equal(ts.status, 200, JSON.stringify(ts.data));
+  const nat = ts.data.family.learners[0];
+  assert.equal(nat.pass.trial, true); assert.equal(nat.pass.daysLeft, 7);
+  assert.equal((await client()("POST", "/api/trial/start", { ...tf, email: "other@example.com", phone: "0966111222" })).data.error, "TRIAL_USED");
+  assert.equal((await client()("POST", "/api/trial/start", { ...tf, phone: "0955000111" })).data.error, "ACCOUNT_EXISTS");
+  assert.equal((await tri("POST", "/api/session/learner", { learnerId: nat.id, deviceId: "dev-T" })).status, 200);
+  const th = await tri("GET", "/api/learner/home");
+  assert.equal(th.data.pass.trial, true); assert.equal((await tri("GET", "/api/learner/topic/1.3.1.1")).status, 200);
+  const tov = await admin("GET", "/api/admin/overview");
+  assert.equal(tov.data.counts.activeTrials, 1);
+  step("free trial: sign-up gives 7 days of full access; one trial per email and per WhatsApp number");
+
+  const trialMsgs = async () => { const m = []; await runReminders({ send: async (x) => { m.push(x); return true; } }); return m.filter((x) => x.email === "zulu@example.com"); };
+  assert.equal((await trialMsgs()).length, 0, "no 10-day reminder for a trial");
+  await admin("POST", `/api/admin/families/${ts.data.family.id}/add-days`, { learnerId: nat.id, days: -6, note: "test" });
+  assert.equal((await trialMsgs())[0]?.type, "trial_ending");
+  await admin("POST", `/api/admin/families/${ts.data.family.id}/add-days`, { learnerId: nat.id, days: -2, note: "test" });
+  assert.equal((await trialMsgs())[0]?.type, "trial_ended");
+  assert.equal((await tri("GET", "/api/learner/topic/1.3.1.1")).status, 402);
+  step("trial reminders 2 days before and at the end; learning locks when the trial ends");
+
+  const w3 = await fetch(BASE + "/api/webhooks/selar", { method: "POST", headers: { "content-type": "application/json", "x-webhook-key": process.env.SELAR_WEBHOOK_KEY },
+    body: JSON.stringify({ email: "zulu@example.com", product: "Little Cherubs Form 1 Biology 90-day pass", reference: "SEL-2001" }) }).then((r) => r.json());
+  assert.equal(w3.applied[0].learner, "Natasha");
+  const th2 = await tri("GET", "/api/learner/home");
+  assert.equal(th2.data.pass.active, true); assert.equal(th2.data.pass.trial, false); assert.equal(th2.data.pass.daysLeft, 90);
+  assert.equal((await admin("GET", "/api/admin/overview")).data.counts.trialsBought, 1);
+  step("buying the 90-Day Access after the trial unlocks 90 days on the same account");
+
   console.log(`\nAll ${passed} checks passed.`);
 } catch (e) {
   console.error("\nTEST FAILED:", e);

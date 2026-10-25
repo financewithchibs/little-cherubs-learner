@@ -63,6 +63,8 @@ let route = { name: "", arg: "" };
 const cache = { topic: {} };  // topic content per code, for this visit only
 const practice = {};          // per code: { qi, text:{}, marks:{}, revealed:{}, mcq:{} }
 
+// "8/30 (27%)": marks plus percentage, so learners see how close they are to 70% mastery.
+function score(got, max) { return max ? `${got}/${max} (${Math.round((got / max) * 100)}%)` : `${got}`; }
 function toast(msg) { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => (t.hidden = true), 2600); }
 function go(hash) { if (location.hash === "#" + hash) render(); else location.hash = hash; }
 function parseHash() {
@@ -201,7 +203,7 @@ function learnerHeader() {
 // yet mastered asks for a practice retake instead of a vague "Continue".
 function heroCard(d, n) {
   const retake = n.parts >= 4 && !n.mastered;
-  const label = n.mastered ? "Review" : retake ? "Retake practice" : n.parts ? "Continue learning" : "Start learning";
+  const label = n.mastered ? "Review" : retake ? "Retake practice questions" : n.parts ? "Continue learning" : "Start learning";
   const target = retake ? `practice/${n.code}` : `topic/${n.code}`;
   const pill = n.mastered ? "Mastered" : retake ? "4/4 done · not yet mastered" : `${n.parts}/4 done`;
   return `<section class="hero">
@@ -209,7 +211,7 @@ function heroCard(d, n) {
       <span class="eyebrow" style="color:inherit;opacity:.85">Topic: ${esc(n.topic || "")}</span>
       <h2>${esc(n.title)}</h2>
       <div class="bar" aria-label="${n.parts} of 4 parts done"><i style="width:${n.parts * 25}%"></i></div>
-      ${retake ? `<p style="margin:0;font-size:.92rem;opacity:.9">You have done every part. Score 70% or more in practice to master this.${n.best != null && n.total ? ` Your best so far: ${n.best} of ${n.total}.` : ""}</p>` : ""}
+      ${retake ? `<p style="margin:0;font-size:.92rem;opacity:.9">You have done every part. Score 70% or more in practice questions to master this.${n.best != null && n.total ? ` Your best so far: ${score(n.best, n.total)}.` : ""}</p>` : ""}
       <button class="btn light" data-go="${esc(target)}">${label} ${I.chev}</button>
       ${retake ? `<button class="btn link" data-go="topic/${esc(n.code)}" style="color:inherit">Go over the topic first</button>` : ""}
     </section>`;
@@ -285,10 +287,10 @@ async function Topic(code) {
       ${part("lesson", I.book, "Lesson", "Explanations, worked examples and a quick check", p.lesson)}
       ${part("video", I.video, "Video", hasMedia ? `${esc(t.content.videoTitle || "Watch")} · from ${smallest.toFixed(1)} MB` : "Video coming soon · script available", p.video)}
       ${part("practical", I.flask, "Practical", "Hands-on activity, no lab needed", p.prac)}
-      ${part("practice", I.quiz, "Practice", `${t.content.questions.length} questions · ${t.content.totalMarks} marks`, p.best != null, p.best != null ? `Best ${p.best}/${t.content.totalMarks}` : "")}
+      ${part("practice", I.quiz, "Practice Questions", `${t.content.questions.length} questions · ${t.content.totalMarks} marks`, p.best != null, p.best != null ? `Best ${score(p.best, t.content.totalMarks)}` : "")}
     </div>
-    ${p.mastery ? `<div class="box ${p.mastery === "Mastered" ? "green" : "cop"}"><b>${p.mastery}</b><p class="muted" style="font-size:.9rem">Mastered means 70% or more on practice.</p></div>`
-      : `<p class="muted" style="font-size:.9rem">Do the lesson first, then practise. You master a competence at 70%.</p>`}
+    ${p.mastery ? `<div class="box ${p.mastery === "Mastered" ? "green" : "cop"}"><b>${p.mastery}</b><p class="muted" style="font-size:.9rem">Mastered means 70% or more in practice questions.</p></div>`
+      : `<p class="muted" style="font-size:.9rem">Do the lesson first, then the practice questions. You master a competence at 70%.</p>`}
   </main>`;
 }
 
@@ -297,7 +299,7 @@ async function Lesson(code) {
   return backHeader("Lesson", `BIO-F${t.competence.form}-${code}`, "topic/" + code) + `<main class="wrap stack">
     <article class="content">${t.content.lessonHtml}</article>
     <button class="btn block" data-act="done" data-part="lesson" data-code="${esc(code)}" ${t.progress.lesson ? "disabled" : ""}>${t.progress.lesson ? "Lesson complete" : "Mark lesson complete"}</button>
-    ${t.progress.lesson ? `<button class="btn alt block" data-go="practice/${esc(code)}">Practise now ${I.chev}</button>` : ""}
+    ${t.progress.lesson ? `<button class="btn alt block" data-go="practice/${esc(code)}">Practise questions now ${I.chev}</button>` : ""}
   </main>`;
 }
 
@@ -325,7 +327,7 @@ function bindVideo(code) {
   clearInterval(wmTimer);
   const el = $("#media");
   if (!el) return;
-  el.addEventListener("ended", () => markDone(code, "video", "Video finished"));
+  el.addEventListener("ended", () => markDone(code, "video", "Video finished", { auto: true }));
   el.addEventListener("contextmenu", (e) => e.preventDefault());
   const w = $("#wmk");
   if (w) {
@@ -364,7 +366,7 @@ async function Practice(code) {
   const t = await loadTopic(code);
   const st = pstate(code, t);
   const qs = t.content.questions;
-  if (!qs.length) return backHeader("Practice", "", "topic/" + code) + `<main class="wrap"><div class="box">Questions for this topic are coming soon.</div></main>`;
+  if (!qs.length) return backHeader("Practice Questions", "", "topic/" + code) + `<main class="wrap"><div class="box">Questions for this topic are coming soon.</div></main>`;
   const q = qs[st.qi];
   // Fetch the explanation for an MCQ answered earlier (e.g. after a refresh).
   if (q.type === "MCQ" && st.mcq[q.qid]?.pending) {
@@ -395,7 +397,7 @@ async function Practice(code) {
     }
   }
   const last = st.qi === qs.length - 1;
-  return backHeader("Practice questions", `BIO-F${t.competence.form}-${code}`, "topic/" + code) + `<main class="wrap stack">
+  return backHeader("Practice Questions", `BIO-F${t.competence.form}-${code}`, "topic/" + code) + `<main class="wrap stack">
     <div class="dots" aria-label="Questions">${qs.map((x, i) => `<button class="qd ${i === st.qi ? "cur" : ""} ${qState(st, x)}" data-act="jump" data-i="${i}" data-code="${esc(code)}" aria-label="Question ${i + 1}">${i + 1}</button>`).join("")}</div>
     <div class="qhead"><span class="code">${esc(q.id)}</span><span class="grow"></span><span class="pill">${esc(q.type)}</span><span class="pill">${plural(q.marks, "mark")}</span><span class="pill ${q.diff === "Hard" ? "cop" : ""}">${esc(q.diff)}</span></div>
     ${body}
@@ -422,11 +424,11 @@ async function Results(code) {
     B: ["Go through the worked examples again, then retry the questions with tables.", "lesson", "Open lesson"],
     C: ["Repeat the practical and compare your results with the expected ones.", "practical", "Open practical"] }[weakest];
   return backHeader("Your results", `BIO-F${t.competence.form}-${code}`, "topic/" + code) + `<main class="wrap stack">
-    <div class="card score">${ring(p)}<div class="stack-s"><span class="eyebrow">This attempt</span><h2 style="font-variant-numeric:tabular-nums">${a.total} of ${a.max} marks</h2><span class="pill ${p >= 0.7 ? "on" : "cop"}">${lastResult.mastery || ""}</span></div></div>
+    <div class="card score">${ring(p)}<div class="stack-s"><span class="eyebrow">This attempt</span><h2 style="font-variant-numeric:tabular-nums">${a.total} of ${a.max} marks (${Math.round(p * 100)}%)</h2><span class="pill ${p >= 0.7 ? "on" : "cop"}">${lastResult.mastery || ""}</span></div></div>
     <div class="card stack"><h3>By skill</h3>${aoBars(a.ao, a.aoMax)}</div>
     ${p < 1 && tip ? `<div class="box cop stack-s"><h3>What to do next</h3><p>${tip[0]}</p><button class="btn alt" data-go="${tip[1]}/${esc(code)}">${tip[2]} ${I.chev}</button></div>` : `<div class="box green"><b>Full marks.</b> Move on to the next topic.</div>`}
     <div class="navq"><button class="btn alt" data-act="retry" data-code="${esc(code)}">Try again</button><button class="btn" data-go="topic/${esc(code)}">Back to topic</button></div>
-    <p class="muted" style="font-size:.85rem">Best score so far: ${lastResult.best}/${a.max}. Your parent sees this in their progress report.</p>
+    <p class="muted" style="font-size:.85rem">Best score so far: ${score(lastResult.best, a.max)}. Your parent sees this in their progress report.</p>
   </main>`;
 }
 
@@ -505,7 +507,7 @@ async function ParentHome() {
       <div class="stats" style="margin-top:6px">
         <div class="stat"><b>${s.totals.mastered}<span style="font-size:.9rem;color:var(--muted)">/${s.totals.competences}</span></b><span>competences mastered</span></div>
         <div class="stat"><b>${s.totals.started}</b><span>competences started</span></div>
-        <div class="stat"><b>${s.lastAttempt ? Math.round((s.lastAttempt.total / s.lastAttempt.max) * 100) + "%" : "–"}</b><span>last practice</span></div>
+        <div class="stat"><b>${s.lastAttempt ? Math.round((s.lastAttempt.total / s.lastAttempt.max) * 100) + "%" : "–"}</b><span>last practice questions score</span></div>
       </div>
     </section>`).join("")}
     <section class="stack-s"><h3>Reminders</h3><p class="muted" style="font-size:.92rem">You'll get a WhatsApp message and an email 10 days and 2 days before a pass ends, with a link to renew on Selar.</p></section>
@@ -533,10 +535,10 @@ async function Report(id) {
     <section class="card stack-s"><h3>Form ${s.form} Biology</h3>
       <dl class="kv"><dt>Topics open</dt><dd>${s.totals.open} of ${s.totals.competences}</dd><dt>Topics started</dt><dd>${s.totals.started}</dd><dt>Topics mastered</dt><dd>${s.totals.mastered}</dd>
       <dt>Pass</dt><dd>${s.pass.active ? `${plural(s.pass.daysLeft, "day")} left` : s.pass.endsAt ? "Ended " + fmtD(s.pass.endsAt) : "No pass yet"}</dd></dl></section>
-    <section class="card stack"><h3>Skills in the last practice</h3>${la ? aoBars(la.ao, la.aoMax) + `<p class="muted" style="font-size:.85rem">${fmtD(la.at)} · ${la.total} of ${la.max} marks</p>` : `<p class="muted">${esc(s.name)} hasn't finished a practice set yet.</p>`}</section>
+    <section class="card stack"><h3>Skills in the last practice questions</h3>${la ? aoBars(la.ao, la.aoMax) + `<p class="muted" style="font-size:.85rem">${fmtD(la.at)} · ${la.total} of ${la.max} marks (${Math.round((la.total / la.max) * 100)}%)</p>` : `<p class="muted">${esc(s.name)} hasn't finished a set of practice questions yet.</p>`}</section>
     ${weak && weak[1] < 1 ? `<section class="box green stack-s"><h3>How you can help this week</h3><p>${help[weak[0]]}</p></section>` : ""}
     <section class="stack-s"><h3>Competences</h3>${d.topics.length ? d.topics.map((t) => `<div class="card stack-s"><span class="code">BIO-F${s.form}-${esc(t.code)} · ${esc(t.topic || "")}</span><b>${esc(t.title)}</b>
-      <div class="row" style="flex-wrap:wrap;gap:6px">${pills(t.lesson, "Lesson")}${pills(t.video, "Video")}${pills(t.prac, "Practical")}${pills(t.best != null, t.best != null ? `Best ${t.best}/${t.total}` : "Practice")}</div></div>`).join("") : `<p class="muted">No competences open yet.</p>`}</section>
+      <div class="row" style="flex-wrap:wrap;gap:6px">${pills(t.lesson, "Lesson")}${pills(t.video, "Video")}${pills(t.prac, "Practical")}${pills(t.best != null, t.best != null ? `Best ${score(t.best, t.total)}` : "Practice Questions")}</div></div>`).join("") : `<p class="muted">No competences open yet.</p>`}</section>
     <section class="card"><h3 style="margin-bottom:6px">Recent activity</h3>${s.log.length ? s.log.map((e) => `<div class="log"><time>${fmtShort(e.at)}</time><span>${esc(e.text)}</span></div>`).join("") : `<p class="muted">No activity yet.</p>`}</section>
   </main>`;
 }
@@ -603,11 +605,26 @@ function handleError(e) {
 }
 
 /* ---------- actions ---------- */
-async function markDone(code, part, msg) {
+// Parts in the order learners meet them on the topic page.
+const PARTS = [["lesson", "lesson", "Lesson"], ["video", "video", "Video"], ["prac", "practical", "Practical"], ["practice", "practice", "Practice Questions"]];
+// After a part is marked done, go straight to the next unfinished part (wrapping round),
+// or back to the topic page when everything is done.
+function nextPartRoute(code, from) {
+  const pr = cache.topic[code]?.progress || {};
+  const isDone = (k) => (k === "practice" ? pr.best != null : !!pr[k]);
+  const i = PARTS.findIndex(([k]) => k === from);
+  const order = PARTS.slice(i + 1).concat(PARTS.slice(0, i));
+  const nxt = order.find(([k]) => !isDone(k));
+  return nxt ? { route: `${nxt[1]}/${code}`, label: nxt[2] } : { route: `topic/${code}`, label: "" };
+}
+async function markDone(code, part, msg, { auto = false } = {}) {
+  if (auto && cache.topic[code]?.progress?.[part]) return; // re-watching a finished video: stay put
   try {
     await api("POST", `/api/learner/progress/${encodeURIComponent(code)}`, { part });
     if (cache.topic[code]) cache.topic[code].progress[part] = true;
-    toast(msg); render();
+    const n = nextPartRoute(code, part);
+    toast(`${msg} ✓${n.label ? ` · Next: ${n.label}` : " · All parts done"}`);
+    go(n.route); window.scrollTo(0, 0);
   } catch (e) { handleError(e); }
 }
 
@@ -630,7 +647,7 @@ document.addEventListener("click", async (e) => {
       case "switch": me = await api("POST", "/api/session/clear"); pinFor = false; parentData = null; go("who"); break;
       case "reclaim": await chooseLearner(me.session.learnerId); break;
       case "signout": await api("POST", "/api/auth/logout"); me = { signedIn: false, renewUrl: me?.renewUrl }; pinFor = false; go("signin"); break;
-      case "done": el.disabled = true; await markDone(code, el.dataset.part, { lesson: "Lesson complete", video: "Marked as watched", prac: "Practical complete" }[el.dataset.part]); break;
+      case "done": el.disabled = true; await markDone(code, el.dataset.part, { lesson: "Lesson complete", video: "Video watched", prac: "Practical complete" }[el.dataset.part]); break;
       case "quality": pref.set("quality", el.dataset.q); render(); break;
       case "saver": { const v = !pref.get("dataSaver", true); pref.set("dataSaver", v); pref.set("quality", v ? "240" : "360"); render(); break; }
       case "pick": {

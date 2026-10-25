@@ -113,22 +113,29 @@ function setTabs(kind) {
 /* Signed-out screens                                                     */
 /* ===================================================================== */
 function SignIn() {
-  return brandHeader() + `<main class="wrap welcome">
-    <img class="logo" src="/assets/logo.png" alt="Little Cherubs logo">
-    <div class="stack-s center"><h1>Little Cherubs Learner</h1><p class="muted">Lessons, videos and practice that follow the CDC syllabus, Forms 1 to 4.</p></div>
-    <form class="card stack" data-form="signin">
-      <div class="field"><label for="em">Email address</label><input id="em" name="email" type="email" autocomplete="username" required></div>
-      <div class="field"><label for="pw">Password</label><input id="pw" name="password" type="password" autocomplete="current-password" required></div>
-      <div id="formerr"></div>
-      <button class="btn block" type="submit">Sign in</button>
-      <button class="linkbtn" type="button" data-go="forgot">Forgotten your password?</button>
-    </form>
-    <div class="box green stack-s"><b>New to Little Cherubs Learner?</b>
-      <p style="font-size:.92rem">Try everything free for ${me?.trial?.days || 7} days: lessons, videos, practicals and practice questions. No payment needed to start.</p>
-      <button class="btn" data-go="trial">Start your ${me?.trial?.days || 7}-day free trial ${I.chev}</button></div>
-    <div class="box stack-s"><b>Ready to buy?</b>
-      <p style="font-size:.92rem">Buy the 90-Day Access on Selar. Your set-up link arrives by email within minutes of paying.</p>
-      <a class="btn alt" href="${esc(me?.renewUrl || "#")}" target="_blank" rel="noopener">Buy the 90-Day Access</a></div>
+  const days = me?.trial?.days || 7;
+  // Compact layout: sign in, free trial and buy all fit on one screen (phone and laptop).
+  return brandHeader() + `<main class="wrap signin">
+    <div class="si-intro">
+      <img class="si-logo" src="/assets/logo.png" alt="Little Cherubs logo">
+      <div><h1>Welcome to <span class="nowrap">Little Cherubs Learner</span></h1><p class="muted">Form 1 Biology · Zambia's new Competence-Based Curriculum (CDC)</p></div>
+    </div>
+    <div class="si-grid">
+      <form class="card si-form" data-form="signin">
+        <h2 class="si-h">Sign in</h2>
+        <div class="field"><label for="em">Email address</label><input id="em" name="email" type="email" autocomplete="username" required></div>
+        <div class="field"><div class="si-row"><label for="pw">Password</label><button class="linkbtn" type="button" data-go="forgot">Forgotten?</button></div><input id="pw" name="password" type="password" autocomplete="current-password" required></div>
+        <div id="formerr"></div>
+        <button class="btn block" type="submit">Sign in</button>
+      </form>
+      <section class="card si-new">
+        <h2>New here?</h2>
+        <p class="muted">Try everything free for ${days} days. No payment needed.</p>
+        <button class="btn gold block" data-go="trial">Start your ${days}-day free trial ${I.chev}</button>
+        <a class="btn alt block" href="${esc(me?.renewUrl || "#")}" target="_blank" rel="noopener">Buy the 90-Day Access</a>
+        <p class="muted si-note">After paying on Selar, your set-up link arrives by email within minutes.</p>
+      </section>
+    </div>
   </main>`;
 }
 

@@ -321,3 +321,33 @@ button,a.btn{transition:background-color .15s,color .15s,border-color .15s}
 .rate input:focus-visible+span{outline:3px solid var(--gold-bright);outline-offset:2px}
 @media (hover:hover){.rate label:hover span{border-color:var(--gold-bright);background:var(--gold-hover);color:var(--on-gold)}.rate label:hover input:checked+span{background:var(--brand);color:var(--brand-ink)}}
 
+/* sign-in screen: everything on one screen */
+.btn.gold{background:var(--gold-bright);color:#24305C}
+.signin{display:flex;flex-direction:column;gap:12px;padding-block:12px;max-width:940px;margin-inline:auto}
+.si-intro{display:flex;align-items:center;gap:12px}
+.si-logo{display:none;width:56px;height:56px;border-radius:50%;object-fit:cover;background:#fff;border:1px solid var(--line);flex:none}
+.si-intro h1{font-size:1.15rem;text-align:left}
+.si-intro p{font-size:.8rem;margin-top:2px}
+.si-h{display:none}
+.nowrap{white-space:nowrap}
+.si-grid{display:grid;gap:12px}
+.si-form,.si-new{display:flex;flex-direction:column;gap:10px}
+.si-form h2,.si-new h2{font-size:1.1rem}
+.si-form .field{gap:4px}
+.si-form .field input{padding:10px 12px}
+.si-row{display:flex;justify-content:space-between;align-items:baseline}
+.si-row .linkbtn{font-size:.85rem}
+.si-new p{font-size:.88rem}
+.si-new .si-note{font-size:.78rem}
+@media (min-width:760px){
+  .signin{padding-block:40px;gap:24px}
+  .si-intro{justify-content:center;text-align:left}
+  .si-logo{display:block;width:84px;height:84px}
+  .si-h{display:block}
+  .si-intro h1{font-size:1.7rem}
+  .si-intro p{font-size:.95rem}
+  .si-grid{grid-template-columns:1fr 1fr;gap:20px;align-items:stretch}
+  .si-form,.si-new{padding:22px;gap:12px}
+  .si-new .btn.gold{margin-top:auto}
+}
+

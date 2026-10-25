@@ -385,7 +385,7 @@ on("POST", "/api/learner/practice/:code/finish", async (req, p) => {
   cp.mastered = cp.best / c.totalMarks >= core.MASTERY;
   cp.current = { mcq: {} };
   cp.touchedAt = attempt.at;
-  core.logActivity(prog, `Practice on ${c.title}: ${total} of ${c.totalMarks} marks`);
+  core.logActivity(prog, `Practice questions on ${c.title}: ${total} of ${c.totalMarks} marks (${Math.round((total / c.totalMarks) * 100)}%)`);
   await core.saveProgress(learner.id, prog);
   return { attempt, best: cp.best, mastery: core.mastery(cp, c.totalMarks) };
 });

@@ -65,9 +65,14 @@ function blobStore(name) {
   };
 }
 
+// Netlify gives each request its own short-lived Blobs access token. A Blobs store
+// object keeps the token it was created with, so caching it across requests makes
+// later requests fail with "Token expired" once the function stays warm. Blob
+// stores are therefore created fresh on every call (this is cheap: no network).
 const cache = new Map();
 export function store(name) {
-  if (!cache.has(name)) cache.set(name, LOCAL_DIR ? localStore(name) : blobStore(name));
+  if (!LOCAL_DIR) return blobStore(name);
+  if (!cache.has(name)) cache.set(name, localStore(name));
   return cache.get(name);
 }
 

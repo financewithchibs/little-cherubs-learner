@@ -38,7 +38,8 @@ function shell(inner) {
 
 /* ---------- screens ---------- */
 function Login() {
-  return `<main class="wrap welcome" style="max-width:420px;margin:0 auto">
+  return `<header class="top"><div class="wrap"><div class="brand"><img src="/assets/emblem.png" alt="" width="40" height="40"><span class="wm"><small>LITTLE</small><b>Cherubs</b><i>Admin</i></span></div></div></header>
+  <main class="wrap welcome" style="max-width:420px;margin:0 auto">
     <img class="logo" src="/assets/logo.png" alt="Little Cherubs logo" style="width:120px;height:120px">
     <h1 class="center">Admin sign in</h1>
     <form class="card stack" data-form="login"><div class="field"><label for="ap">Admin password</label><input id="ap" name="password" type="password" autocomplete="current-password" required></div>

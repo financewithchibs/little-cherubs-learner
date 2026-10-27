@@ -173,16 +173,23 @@ export function finishHtml(html, code, form = 1, counter = { n: 0 }) {
     });
   html = html.replace(/(<h3>(Labelled diagrams?)([^<]*)<\/h3>)([\s\S]*?)(?=<h[1-4][ >]|$)/g, (m, head, word, rest, body) => {
     const title = rest.replace(/^\s*:\s*/, "").trim() || "Labelled diagram";
-    const briefs = [...body.matchAll(/Diagram description for the designer\s*(?:\(([^)]*)\))?:?\s*(?:<\/?(?:em|strong)>)?\s*([^<.]*)/g)];
+    // A "Second brief" under the same heading is a second picture.
+    const briefs = [...body.matchAll(/(Diagram description for the designer|Second brief)\s*(?:\(([^)]*)\))?:?\s*(?:<\/?(?:em|strong)>)?\s*([^<.]*)/g)]
+      .map((b) => {
+        if (b[1] !== "Second brief") return [b[0], b[2], b[3]];
+        const what = /the ([a-z ]+?) diagrams?/i.exec(b[3] || "");
+        return [b[0], what ? `${what[1]} diagrams` : "second diagram", ""];
+      });
     if (!briefs.length) return m;
     const figs = briefs.map((b) => {
       counter.n += 1;
       const part = b[1] && /^\d+$/.test(b[1].trim()) ? (b[2] || "").trim() : (b[1] || "").trim();
-      const label = part ? (title === "Labelled diagram" ? part : `${title}: ${part}`) : title;
+      const label = part ? (title === "Labelled diagram" || /diagrams$/.test(part) ? part.charAt(0).toUpperCase() + part.slice(1) : `${title}: ${part}`) : title;
       const src = `/diagrams/F${form}-${escAttr(code)}-${counter.n}.svg`;
       return `<figure class="diagram"><a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${escAttr(label)}" loading="lazy"></a><figcaption>Tap the diagram to open it full size.</figcaption></figure>`;
     });
-    return `${head}\n${figs.join("\n")}\n`;
+    // Several pictures under one heading sit side by side on wide screens.
+    return figs.length > 1 ? `${head}\n<div class="diagram-row">${figs.join("\n")}</div>\n` : `${head}\n${figs[0]}\n`;
   });
   return html;
 }

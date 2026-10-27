@@ -152,11 +152,47 @@ export function parseContentDoc(md) {
   return { ok: true, content: out, warnings };
 }
 
+// Final touches applied when content is served, so content already uploaded
+// benefits without being uploaded again:
+// 1. "Answer:" / "Answers:" hides EVERYTHING after it up to the next heading
+//    inside "Show answers" (worked examples often answer with a list).
+// 2. Designer briefs under a "Labelled diagram" heading are for the illustrator,
+//    not learners: each brief becomes the finished picture
+//    /diagrams/F<form>-<code>-<n>.svg (numbered through the document). The app
+//    shows "Diagram coming soon" while a picture has not been added yet.
+const escAttr = (s) => String(s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+export function finishHtml(html, code, form = 1, counter = { n: 0 }) {
+  if (!html) return "";
+  html = html.replace(/<details class="answers"><summary>Show answers<\/summary><p>([\s\S]*?)<\/p><\/details>/g,
+    "<p><strong>Answer:</strong>$1</p>");
+  html = html.replace(/<p><strong>(Answers?):<\/strong>([\s\S]*?)(?=<h[1-4][ >]|$)/g,
+    (m, w, rest) => {
+      rest = rest.trim();
+      const body = /^<\/p>/.test(rest) ? rest.replace(/^<\/p>\s*/, "") : `<p>${rest}`;
+      return `<details class="answers"><summary>Show answers</summary>${body}\n</details>\n`;
+    });
+  html = html.replace(/(<h3>(Labelled diagrams?)([^<]*)<\/h3>)([\s\S]*?)(?=<h[1-4][ >]|$)/g, (m, head, word, rest, body) => {
+    const title = rest.replace(/^\s*:\s*/, "").trim() || "Labelled diagram";
+    const briefs = [...body.matchAll(/Diagram description for the designer\s*(?:\(([^)]*)\))?:?\s*(?:<\/?(?:em|strong)>)?\s*([^<.]*)/g)];
+    if (!briefs.length) return m;
+    const figs = briefs.map((b) => {
+      counter.n += 1;
+      const part = b[1] && /^\d+$/.test(b[1].trim()) ? (b[2] || "").trim() : (b[1] || "").trim();
+      const label = part ? (title === "Labelled diagram" ? part : `${title}: ${part}`) : title;
+      const src = `/diagrams/F${form}-${escAttr(code)}-${counter.n}.svg`;
+      return `<figure class="diagram"><a href="${src}" target="_blank" rel="noopener"><img src="${src}" alt="${escAttr(label)}" loading="lazy"></a><figcaption>Tap the diagram to open it full size.</figcaption></figure>`;
+    });
+    return `${head}\n${figs.join("\n")}\n`;
+  });
+  return html;
+}
+
 // What the learner's browser receives: no answers, no marking points.
 export function learnerView(c) {
+  const comp = findCompetence(c.code), form = comp?.form || 1, counter = { n: 0 };
   return {
-    code: c.code, title: c.title, lessonHtml: c.lessonHtml || "", practicalTitle: c.practicalTitle || "Practical",
-    practicalHtml: c.practicalHtml || "", videoTitle: c.videoTitle || "", scenes: c.scenes || [], scriptHtml: c.scriptHtml || "",
+    code: c.code, title: c.title, lessonHtml: finishHtml(c.lessonHtml, c.code, form, counter), practicalTitle: c.practicalTitle || "Practical",
+    practicalHtml: finishHtml(c.practicalHtml, c.code, form, counter), videoTitle: c.videoTitle || "", scenes: c.scenes || [], scriptHtml: c.scriptHtml || "",
     totalMarks: c.totalMarks, aoMax: c.aoMax,
     questions: (c.questions || []).map((q) => ({
       qid: q.qid, id: q.id, type: q.type, marks: q.marks, diff: q.diff, questionHtml: q.questionHtml,

@@ -351,3 +351,10 @@ button,a.btn{transition:background-color .15s,color .15s,border-color .15s}
   .si-new .btn.gold{margin-top:auto}
 }
 
+/* lesson diagrams */
+figure.diagram{margin:4px 0 8px;background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;overflow:hidden}
+figure.diagram img{display:block;width:100%;height:auto;max-width:720px;margin:0 auto}
+.diagram-soon{font-size:.9rem;font-style:italic}
+figure.diagram figcaption{font-size:.8rem;color:var(--muted);text-align:center;margin-top:6px}
+@media (min-width:900px){figure.diagram figcaption{display:none}}
+

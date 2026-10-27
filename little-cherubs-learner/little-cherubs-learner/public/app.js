@@ -839,6 +839,13 @@ document.addEventListener("submit", async (e) => {
 });
 
 window.addEventListener("hashchange", render);
+// A lesson diagram whose picture hasn't been added yet shows a short note instead of a broken image.
+document.addEventListener("error", (e) => {
+  const img = e.target;
+  if (img?.tagName === "IMG" && img.closest("figure.diagram")) {
+    img.closest("figure.diagram").outerHTML = `<p class="muted diagram-soon">The diagram for this section is being drawn and will appear here soon.</p>`;
+  }
+}, true);
 function net() { $("#net").hidden = navigator.onLine !== false; }
 window.addEventListener("online", net); window.addEventListener("offline", net);
 net();
